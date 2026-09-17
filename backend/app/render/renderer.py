@@ -1,0 +1,110 @@
+"""Turns generated blocks into a branded .docx.
+
+The template file carries every style, the header, the footer and the page
+setup. Nothing about the design lives in this module: it only chooses which
+named style each piece of content gets, so a design change is made in Word and
+never here.
+"""
+from __future__ import annotations
+
+import io
+from pathlib import Path
+
+from docx import Document
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.shared import Pt, RGBColor, Twips
+
+from ..schemas import Masthead, RenderedChapter
+from . import docxutil as X
+
+TEMPLATE = Path(__file__).resolve().parent.parent / "assets" / "template.docx"
+
+RED = RGBColor(0xE4, 0x03, 0x2E)
+BLUE_BAR = "3E6E9E"
+BLUE_BG = "E7EEF5"
+RED_BG = "FBE7EA"
+RED_BAR = "E4032E"
+
+CONTENT_W = Twips(9638)  # A4 minus 2 cm margins, matching the template
+
+
+def _fmt_date(d) -> str:
+    return d.strftime("%d.%m.%Y")
+
+
+def _box(doc, kind: str, title: str, text: str) -> None:
+    """A highlight box: one-cell table, tinted fill, coloured left bar."""
+    bar, bg = (RED_BAR, RED_BG) if kind == "action_box" else (BLUE_BAR, BLUE_BG)
+    table = doc.add_table(rows=1, cols=1)
+    X.table_no_borders(table)
+    table.autofit = False
+    cell = table.cell(0, 0)
+    cell.width = CONTENT_W
+    X.shade_cell(cell, bg)
+    X.cell_borders(cell, left=bar, size=24)
+    X.cell_margins(cell, top=150, bottom=150, left=240, right=240)
+    X.row_cannot_split(table.rows[0])
+
+    p = cell.paragraphs[0]
+    X.set_style(p, "CalloutTitle")
+    run = p.add_run(title.upper())
+    run.font.color.rgb = RGBColor.from_string(bar)
+
+    for line in [t for t in text.split("\n") if t.strip()]:
+        cp = cell.add_paragraph(line.strip())
+        X.set_style(cp, "Callout")
+        cp.paragraph_format.space_after = Pt(3)
+
+    doc.add_paragraph()  # breathing room after the box
+
+
+def render_document(masthead: Masthead, chapters: list[RenderedChapter]) -> bytes:
+    doc = Document(str(TEMPLATE))
+    bullet_numpr = X.find_bullet_numpr(doc)
+    X.clear_body(doc)
+
+    # ---- header / footer placeholders ----
+    mapping = {
+        "KICKER": masthead.header_kicker,
+        "ISSUED_BY": masthead.footer_issued_by,
+        "REVISION": masthead.footer_revision,
+        "PUB_DATE": _fmt_date(masthead.publication_date),
+    }
+    for section in doc.sections:
+        X.replace_in_part(section.header, mapping)
+        X.replace_in_part(section.footer, mapping)
+
+    # ---- title block ----
+    title = doc.add_paragraph()
+    X.set_style(title, "DocTitle")
+    title.add_run(f"{masthead.doc_type} \u2013 ")
+    issue = title.add_run(masthead.doc_issue)
+    issue.font.color.rgb = RED
+
+    X.set_style(doc.add_paragraph(masthead.doc_headline), "DocHeadline")
+    X.set_style(doc.add_paragraph(_fmt_date(masthead.publication_date)), "DocDate")
+
+    # ---- chapters ----
+    for chapter in chapters:
+        X.set_style(doc.add_paragraph(chapter.heading), "Heading1")
+        for block in chapter.blocks:
+            if block.kind == "body":
+                for para in [t for t in block.text.split("\n") if t.strip()]:
+                    X.set_style(doc.add_paragraph(para.strip()), "Body")
+            elif block.kind == "bullets":
+                for item in block.items:
+                    p = doc.add_paragraph(item)
+                    X.set_style(p, "Body")
+                    X.apply_numpr(p, bullet_numpr)
+            else:
+                _box(doc, block.kind, block.title, block.text)
+
+    buf = io.BytesIO()
+    doc.save(buf)
+    return buf.getvalue()
+
+
+def filename_for(masthead: Masthead) -> str:
+    dept = masthead.footer_issued_by.replace(" ", "_") or "Publication"
+    issue = masthead.doc_issue.replace(" ", "_") or _fmt_date(masthead.publication_date)
+    return f"{dept}_{masthead.doc_type}_{issue}.docx"

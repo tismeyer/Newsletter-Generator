@@ -1,0 +1,43 @@
+const BASE = import.meta.env.VITE_API_BASE || "";
+
+async function post(path, body) {
+  const r = await fetch(BASE + path, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!r.ok) {
+    let detail = `Request failed (${r.status}).`;
+    try {
+      const j = await r.json();
+      if (j.detail) detail = typeof j.detail === "string" ? j.detail : JSON.stringify(j.detail);
+    } catch {
+      /* keep the status message */
+    }
+    throw new Error(detail);
+  }
+  return r;
+}
+
+export const getProviders = async () => {
+  const r = await fetch(BASE + "/api/providers");
+  if (!r.ok) throw new Error("Could not reach the server.");
+  return r.json();
+};
+
+export const draft = async (payload) => (await post("/api/draft", payload)).json();
+
+export async function renderDocx(masthead, chapters) {
+  const r = await post("/api/render", { masthead, chapters });
+  const blob = await r.blob();
+  const name =
+    (r.headers.get("Content-Disposition") || "").match(/filename="(.+?)"/)?.[1] ||
+    "newsletter.docx";
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = name;
+  a.click();
+  URL.revokeObjectURL(url);
+  return name;
+}
