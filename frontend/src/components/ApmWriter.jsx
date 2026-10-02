@@ -77,6 +77,29 @@ function clean(html) {
   return doc.body.innerHTML;
 }
 
+/** Plain-text fallback for the clipboard: block elements become new lines. */
+function htmlToText(html) {
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  doc.querySelectorAll("li").forEach((li) => li.prepend("\u2022 "));
+  doc.querySelectorAll("p,h1,h2,h3,h4,h5,h6,li,tr,br").forEach((el) => el.append("\n"));
+  return doc.body.textContent.replace(/\n{3,}/g, "\n\n").trim();
+}
+
+/** For browsers without the async clipboard: copy HTML through a copy event. */
+function legacyCopy(html) {
+  const on = (e) => {
+    e.clipboardData.setData("text/html", html);
+    e.clipboardData.setData("text/plain", htmlToText(html));
+    e.preventDefault();
+  };
+  document.addEventListener("copy", on);
+  try {
+    if (!document.execCommand("copy")) throw new Error("copy refused");
+  } finally {
+    document.removeEventListener("copy", on);
+  }
+}
+
 const SEVERITY = { error: "Error", warning: "Warning", info: "Note" };
 
 // ---------- writing ----------
@@ -92,7 +115,7 @@ function Writer({ notify }) {
   });
   const [busy, setBusy] = useState(false);
   const [res, setRes] = useState(null); // {draft, violations, iterations, target}
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState("");
   const set = (k) => (v) => setOpts((o) => ({ ...o, [k]: v }));
 
   const generate = async () => {
@@ -108,14 +131,48 @@ function Writer({ notify }) {
     }
   };
 
-  const copy = async () => {
+  const done = (what) => {
+    setCopied(what);
+    setTimeout(() => setCopied(""), 2000);
+  };
+
+  // Formatted copy for pasting into WebManuals: only the draft's own HTML goes
+  // to the clipboard, never the fonts and sizes this page displays it with.
+  const copyFormatted = async () => {
     try {
-      await navigator.clipboard.writeText(res.draft);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      if (res.target !== "html") await navigator.clipboard.writeText(res.draft);
+      else if (window.ClipboardItem && navigator.clipboard.write)
+        await navigator.clipboard.write([
+          new ClipboardItem({
+            "text/html": new Blob([html], { type: "text/html" }),
+            "text/plain": new Blob([htmlToText(html)], { type: "text/plain" }),
+          }),
+        ]);
+      else legacyCopy(html);
+      done("formatted");
     } catch {
       notify("Copying failed. Select the text and copy it by hand.");
     }
+  };
+
+  const copyCode = async () => {
+    try {
+      await navigator.clipboard.writeText(res.draft);
+      done("code");
+    } catch {
+      notify("Copying failed. Select the text and copy it by hand.");
+    }
+  };
+
+  // Selecting text in the draft and pressing Ctrl+C gets the same clean HTML.
+  const onCopySelection = (e) => {
+    const sel = window.getSelection();
+    if (!sel || sel.isCollapsed || !sel.rangeCount) return;
+    const box = document.createElement("div");
+    for (let i = 0; i < sel.rangeCount; i++) box.appendChild(sel.getRangeAt(i).cloneContents());
+    e.clipboardData.setData("text/html", box.innerHTML);
+    e.clipboardData.setData("text/plain", sel.toString());
+    e.preventDefault();
   };
 
   const html = useMemo(() => (res && res.target === "html" ? clean(res.draft) : ""), [res]);
@@ -179,12 +236,29 @@ function Writer({ notify }) {
               <div className="apm-paperbar">
                 <span className="apm-label">Draft</span>
                 <span className="spacer" />
-                <button className="btn small" onClick={copy}>
-                  {copied ? "Copied" : res.target === "html" ? "Copy HTML" : "Copy text"}
+                {res.target === "html" && (
+                  <button
+                    className="btn link"
+                    onClick={copyCode}
+                    title="The HTML source, for the WebManuals code view"
+                  >
+                    {copied === "code" ? "Copied" : "Copy HTML code"}
+                  </button>
+                )}
+                <button
+                  className="btn primary small"
+                  onClick={copyFormatted}
+                  title="Paste straight into WebManuals; it takes WebManuals' own fonts"
+                >
+                  {copied === "formatted" ? "Copied" : res.target === "html" ? "Copy for WebManuals" : "Copy text"}
                 </button>
               </div>
               {res.target === "html" ? (
-                <div className="apm-draft" dangerouslySetInnerHTML={{ __html: html }} />
+                <div
+                  className="apm-draft"
+                  onCopy={onCopySelection}
+                  dangerouslySetInnerHTML={{ __html: html }}
+                />
               ) : (
                 <pre className="apm-draft plain">{res.draft}</pre>
               )}
