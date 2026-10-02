@@ -77,6 +77,38 @@ function clean(html) {
   return doc.body.innerHTML;
 }
 
+const isBlank = (n) => n && n.nodeType === 3 && !n.textContent.replace(/[\s\u00a0]/g, "");
+
+/**
+ * The draft as WebManuals keeps it on paste (tested by the S&P team on
+ * 2 October 2026): a blank line inside a bullet must be two line breaks, since
+ * WebManuals drops "<br />&nbsp;"; and a Note, Caution or Warning needs an
+ * empty paragraph before it. The HTML code copy stays as Rosie wrote it.
+ */
+function forPaste(html) {
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  doc.querySelectorAll("li").forEach((li) => {
+    // "<br />&nbsp;" at the end of the bullet's own text (before any sub-list)
+    const kids = [...li.childNodes];
+    const end = kids.findIndex((n) => n.nodeName === "UL" || n.nodeName === "OL");
+    const own = end < 0 ? kids : kids.slice(0, end);
+    let i = own.length - 1;
+    while (i >= 0 && own[i].nodeType === 3 && !own[i].textContent.trim() && !own[i].textContent.includes("\u00a0")) i--;
+    if (i >= 1 && isBlank(own[i]) && own[i - 1].nodeName === "BR") own[i].replaceWith(doc.createElement("br"));
+  });
+  doc.querySelectorAll("table").forEach((t) => {
+    let prev = t.previousSibling;
+    while (isBlank(prev)) prev = prev.previousSibling;
+    const empty = prev && prev.nodeName === "P" && !prev.textContent.replace(/[\s\u00a0]/g, "");
+    if (prev && !empty) {
+      const p = doc.createElement("p");
+      p.innerHTML = "&nbsp;";
+      t.before(p);
+    }
+  });
+  return doc.body.innerHTML;
+}
+
 /** Plain-text fallback for the clipboard: block elements become new lines. */
 function htmlToText(html) {
   const doc = new DOMParser().parseFromString(html, "text/html");
@@ -144,11 +176,11 @@ function Writer({ notify }) {
       else if (window.ClipboardItem && navigator.clipboard.write)
         await navigator.clipboard.write([
           new ClipboardItem({
-            "text/html": new Blob([html], { type: "text/html" }),
+            "text/html": new Blob([forPaste(html)], { type: "text/html" }),
             "text/plain": new Blob([htmlToText(html)], { type: "text/plain" }),
           }),
         ]);
-      else legacyCopy(html);
+      else legacyCopy(forPaste(html));
       done("formatted");
     } catch {
       notify("Copying failed. Select the text and copy it by hand.");
@@ -170,7 +202,7 @@ function Writer({ notify }) {
     if (!sel || sel.isCollapsed || !sel.rangeCount) return;
     const box = document.createElement("div");
     for (let i = 0; i < sel.rangeCount; i++) box.appendChild(sel.getRangeAt(i).cloneContents());
-    e.clipboardData.setData("text/html", box.innerHTML);
+    e.clipboardData.setData("text/html", forPaste(box.innerHTML));
     e.clipboardData.setData("text/plain", sel.toString());
     e.preventDefault();
   };
