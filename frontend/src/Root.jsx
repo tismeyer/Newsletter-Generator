@@ -30,7 +30,7 @@ export default function Root() {
 
   useEffect(() => {
     document.title =
-      page === "newsletter" ? "Newsletter Builder" : page === "apm" ? "Rosie for Editors" : "Helvetic editorial tools";
+      page === "newsletter" ? "Newsletter Builder" : page === "apm" ? "Rosie for Editors" : "Meet Rosie";
   }, [page]);
 
   return (

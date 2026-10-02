@@ -426,6 +426,7 @@ textarea.inline-field.grow{display:block;resize:none;overflow:hidden;min-height:
 .ld-logo{height:34px;margin-bottom:22px}
 .ld-head h1{margin:0;font-size:28px;color:var(--navy);letter-spacing:-.01em}
 .ld-head p{margin:6px 0 0;color:var(--muted);font-size:15px}
+.ld-head p + p{margin-top:2px}
 .ld-tiles{display:grid;grid-template-columns:repeat(2,minmax(0,360px));gap:22px;width:100%;justify-content:center}
 @media (max-width:760px){.ld-tiles{grid-template-columns:minmax(0,420px)}}
 .ld-tile{display:flex;flex-direction:column;gap:6px;padding:26px 26px 22px;background:var(--panel);
@@ -442,12 +443,11 @@ textarea.inline-field.grow{display:block;resize:none;overflow:hidden;min-height:
 :root[data-theme="dark"] .ld-head h1,:root[data-theme="dark"] .ld-go{color:var(--ink)}
 
 /* ---------- Rosie for Editors ---------- */
-.apm-avatar{width:30px;height:30px;border-radius:50%;object-fit:cover;object-position:center 12%;
-  border:2px solid #b5852a;align-self:center}
+.apm-avatar{width:34px;height:34px;object-fit:contain;align-self:center}
 .apm-notes{min-height:280px;resize:vertical;line-height:1.55}
 .apm-go{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .apm-empty{max-width:420px;margin-top:60px;text-align:center;color:var(--muted)}
-.apm-empty img{width:96px;height:96px;border-radius:50%;object-fit:cover;object-position:center 12%;border:2px solid #b5852a}
+.apm-empty img{width:140px;height:140px;object-fit:contain}
 .apm-paper{width:100%;max-width:794px;background:#fff;color:#2b2f33;border:1px solid var(--line);
   box-shadow:0 2px 10px rgba(0,0,0,.08)}
 .apm-paperbar{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid #e3e6e8;background:#fafbfb}

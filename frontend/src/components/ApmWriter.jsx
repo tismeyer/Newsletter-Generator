@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Segmented } from "./Bits.jsx";
-import rosie from "../assets/rosie.jpg";
+import rosie from "../assets/rosie-apm.webp";
 
 /*
  * Rosie for Editors: notes in, APM-conformant manual text out.
