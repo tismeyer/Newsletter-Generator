@@ -1,9 +1,12 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { GrowText } from "./Bits.jsx";
+import ReviseBar from "./DraftTools.jsx";
 import {
   ICONS,
   TREATMENTS,
   TREATMENT_COPY,
   cardFilled,
+  hasDraft,
   newsFilled,
 } from "../model.js";
 import { budget, cardLimit, isFullWidth } from "../budget.js";
@@ -85,61 +88,36 @@ function IconButton({ value, onChange, size }) {
   );
 }
 
-/** A textarea styled as printed body text that grows with what is typed. */
-function GrowText({ value, onChange, placeholder, className, ariaLabel }) {
-  const ref = useRef(null);
-  const fit = () => {
-    const el = ref.current;
-    if (!el) return;
-    el.style.height = "auto";
-    // scrollHeight leaves out the border; add it back or the last line clips.
-    el.style.height = el.scrollHeight + (el.offsetHeight - el.clientHeight) + "px";
-  };
-  useLayoutEffect(fit, [value]);
-  useEffect(() => {
-    // Rewrapping (a card switching between half and full width) changes height too.
-    let width = 0;
-    const ro = new ResizeObserver(([entry]) => {
-      const w = entry.contentRect.width;
-      if (w !== width) {
-        width = w;
-        fit();
-      }
-    });
-    ro.observe(ref.current);
-    return () => ro.disconnect();
-  }, []);
+/** Your notes, tucked away once generated text has taken their place. */
+function Notes({ value, onChange, ariaLabel }) {
   return (
-    <textarea
-      ref={ref}
-      rows={1}
-      className={"inline-field grow " + (className || "")}
-      value={value}
-      placeholder={placeholder}
-      aria-label={ariaLabel}
-      onChange={(e) => onChange(e.target.value)}
-    />
+    <details className="mynotes">
+      <summary>My notes</summary>
+      <GrowText className="ed-notes" value={value} onChange={onChange} ariaLabel={ariaLabel} />
+    </details>
   );
 }
 
-function Card({ card, index, activeCards, activeNews, onChange, onClear }) {
+function Card({ card, index, activeCards, activeNews, ctx, onChange, onClear }) {
   const set = (k, v) => onChange({ ...card, [k]: v });
   const limit = cardLimit(index, Math.max(activeCards, 1), activeNews);
   const filled = cardFilled(card);
   const full = filled && isFullWidth(index, activeCards);
   const copy = TREATMENT_COPY[card.treatment];
+  const drafted = hasDraft(card);
+  const name = "Card " + (index + 1);
 
   return (
     <div className={"ed-cardslot" + (full ? " full" : "") + (filled ? "" : " unused")}>
-      <div className="ed-card">
+      <div className={"ed-card" + (drafted ? " drafted" : "")}>
         <div className="ed-cardhead">
           <IconButton value={card.icon} onChange={(v) => set("icon", v)} size={30} />
           <div className="ed-cardtitles">
             <input
               type="text"
               className="inline-field ed-cardtitle"
-              placeholder={"Card " + (index + 1) + " title"}
-              aria-label={"Card " + (index + 1) + " title"}
+              placeholder={name + " title"}
+              aria-label={name + " title"}
               value={card.title}
               onChange={(e) => set("title", e.target.value)}
             />
@@ -147,34 +125,47 @@ function Card({ card, index, activeCards, activeNews, onChange, onClear }) {
               type="text"
               className="inline-field ed-cardsub"
               placeholder="Subtitle (optional)"
-              aria-label={"Card " + (index + 1) + " subtitle"}
+              aria-label={name + " subtitle"}
               value={card.subtitle}
               onChange={(e) => set("subtitle", e.target.value)}
             />
           </div>
         </div>
-        <GrowText
-          className="ed-cardbody"
-          value={card.text}
-          onChange={(v) => set("text", v)}
-          placeholder={copy.placeholder}
-          ariaLabel={"Card " + (index + 1) + " text"}
-        />
+        {drafted ? (
+          <GrowText
+            className="ed-cardbody"
+            value={card.draft}
+            onChange={(v) => set("draft", v)}
+            ariaLabel={name + " generated text"}
+          />
+        ) : (
+          <GrowText
+            className="ed-cardbody"
+            value={card.text}
+            onChange={(v) => set("text", v)}
+            placeholder={copy.placeholder}
+            ariaLabel={name + " text"}
+          />
+        )}
       </div>
       <div className="ed-tools">
-        <select
-          value={card.treatment}
-          aria-label="What should happen to this text?"
-          title={copy.hint}
-          onChange={(e) => set("treatment", e.target.value)}
-        >
-          {TREATMENTS.map((t) => (
-            <option key={t.v} value={t.v}>
-              {t.label}
-            </option>
-          ))}
-        </select>
-        <Counter used={card.text.length} limit={limit} />
+        {drafted ? (
+          <Notes value={card.text} onChange={(v) => set("text", v)} ariaLabel={name + " notes"} />
+        ) : (
+          <select
+            value={card.treatment}
+            aria-label="What should happen to this text?"
+            title={copy.hint}
+            onChange={(e) => set("treatment", e.target.value)}
+          >
+            {TREATMENTS.map((t) => (
+              <option key={t.v} value={t.v}>
+                {t.label}
+              </option>
+            ))}
+          </select>
+        )}
+        <Counter used={(drafted ? card.draft : card.text).length} limit={limit} />
         <span className="spacer" />
         {filled ? (
           <button type="button" className="btn link" onClick={onClear}>
@@ -184,36 +175,61 @@ function Card({ card, index, activeCards, activeNews, onChange, onClear }) {
           <span className="tag">not used</span>
         )}
       </div>
+      {drafted && (
+        <ReviseBar
+          kind="card"
+          item={card}
+          heading={card.title}
+          limit={limit}
+          {...ctx}
+          onText={(t) => set("draft", t)}
+          onDiscard={() => onChange({ ...card, draft: null, draftFrom: "" })}
+        />
+      )}
     </div>
   );
 }
 
-function NewsRow({ item, index, limit, onChange, onClear }) {
+function NewsRow({ item, index, limit, ctx, onChange, onClear }) {
   const set = (k, v) => onChange({ ...item, [k]: v });
   const filled = newsFilled(item);
+  const drafted = hasDraft(item);
+  const name = "Short news " + (index + 1);
   return (
     <div className={"ed-newsslot" + (filled ? "" : " unused")}>
-      <div className="ed-newsrow">
+      <div className={"ed-newsrow" + (drafted ? " drafted" : "")}>
         <div className="ed-newslabel">
           <IconButton value={item.icon} onChange={(v) => set("icon", v)} size={26} />
           <GrowText
             className="ed-newslabeltext"
             value={item.label}
             onChange={(v) => set("label", v.replace(/\n/g, " "))}
-            placeholder={"Short news " + (index + 1)}
-            ariaLabel={"Short news " + (index + 1) + " label"}
+            placeholder={name}
+            ariaLabel={name + " label"}
           />
         </div>
-        <GrowText
-          className="ed-newstext"
-          value={item.text}
-          onChange={(v) => set("text", v)}
-          placeholder="Two or three short lines."
-          ariaLabel={"Short news " + (index + 1) + " text"}
-        />
+        {drafted ? (
+          <GrowText
+            className="ed-newstext"
+            value={item.draft}
+            onChange={(v) => set("draft", v)}
+            ariaLabel={name + " generated text"}
+          />
+        ) : (
+          <GrowText
+            className="ed-newstext"
+            value={item.text}
+            onChange={(v) => set("text", v)}
+            placeholder="Two or three short lines."
+            ariaLabel={name + " text"}
+          />
+        )}
       </div>
       <div className="ed-tools">
-        <Counter used={item.text.length} limit={limit} />
+        {drafted && (
+          <Notes value={item.text} onChange={(v) => set("text", v)} ariaLabel={name + " notes"} />
+        )}
+        <Counter used={(drafted ? item.draft : item.text).length} limit={limit} />
         <span className="spacer" />
         {filled ? (
           <button type="button" className="btn link" onClick={onClear}>
@@ -223,11 +239,23 @@ function NewsRow({ item, index, limit, onChange, onClear }) {
           <span className="tag">not used</span>
         )}
       </div>
+      {drafted && (
+        <ReviseBar
+          kind="news"
+          item={item}
+          heading={item.label}
+          limit={limit}
+          {...ctx}
+          onText={(t) => set("draft", t)}
+          onDiscard={() => onChange({ ...item, draft: null, draftFrom: "" })}
+        />
+      )}
     </div>
   );
 }
 
-export default function OnePager({ state, patch }) {
+export default function OnePager({ state, patch, notify }) {
+  const ctx = { style: state.style, provider: state.provider, notify };
   const activeCards = state.cards.filter(cardFilled).length;
   const activeNews = state.news.filter(newsFilled).length;
   const b = budget(Math.max(activeCards, 1), activeNews);
@@ -255,8 +283,11 @@ export default function OnePager({ state, patch }) {
             index={i}
             activeCards={activeCards}
             activeNews={activeNews}
+            ctx={ctx}
             onChange={(nc) => setCard(i, nc)}
-            onClear={() => setCard(i, { ...c, title: "", subtitle: "", text: "" })}
+            onClear={() =>
+              setCard(i, { ...c, title: "", subtitle: "", text: "", draft: null, draftFrom: "" })
+            }
           />
         ))}
         </div>
@@ -277,8 +308,9 @@ export default function OnePager({ state, patch }) {
             item={n}
             index={i}
             limit={b.news}
+            ctx={ctx}
             onChange={(nn) => setNews(i, nn)}
-            onClear={() => setNews(i, { ...n, label: "", text: "" })}
+            onClear={() => setNews(i, { ...n, label: "", text: "", draft: null, draftFrom: "" })}
           />
         ))}
         </div>

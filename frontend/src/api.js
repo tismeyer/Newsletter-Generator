@@ -33,8 +33,14 @@ export const getProviders = async () => {
 
 export const draft = async (payload) => (await post("/api/draft", payload)).json();
 
-export async function renderDocx(masthead, chapters) {
-  const r = await post("/api/render", { masthead, chapters });
+export const revise = async (body) => (await post("/api/revise", body)).json();
+
+/**
+ * Build and download the .docx. Boxes that already have text are sent as
+ * finished text, so this only reaches a model for boxes not yet written.
+ */
+export async function renderDocument(payload) {
+  const r = await post("/api/document", payload);
   const blob = await r.blob();
   const name =
     (r.headers.get("Content-Disposition") || "").match(/filename="(.+?)"/)?.[1] ||

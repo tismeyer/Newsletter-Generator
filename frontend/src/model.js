@@ -47,11 +47,13 @@ export const ICONS = [
 export const newCard = (icon = "info") => ({
   id: crypto.randomUUID ? crypto.randomUUID() : String(Math.random()),
   icon, title: "", subtitle: "", text: "", treatment: "draft",
+  draft: null, draftFrom: "",
 });
 
 export const newNews = (icon = "smile") => ({
   id: crypto.randomUUID ? crypto.randomUUID() : String(Math.random()),
   icon, label: "", text: "", treatment: "draft",
+  draft: null, draftFrom: "",
 });
 
 /** A box counts towards the layout only once it has a title or some text. */
@@ -110,6 +112,8 @@ export const newChapter = (heading = "") => ({
   treatment: "draft",
   box_policy: "inherit",
   boxes: [],
+  draft: null,
+  draftFrom: "",
 });
 
 export const emptyState = () => ({
@@ -137,6 +141,115 @@ export const emptyState = () => ({
   provider: "claude",
 });
 
+// ---------- generated text ----------
+//
+// Once text has been generated for a box it is kept on that box as `draft`,
+// plain text the editor can change by hand or have revised. From then on the
+// draft is what goes into the document: it is sent as verbatim text, so it is
+// never rewritten again unless the editor asks. `draftFrom` remembers the notes
+// it was written from, to flag drafts whose notes have since changed.
+
+export const hasDraft = (x) => typeof x.draft === "string";
+export const draftStale = (x) => hasDraft(x) && (x.draftFrom ?? "") !== x.text;
+
+const chapterUsed = (c) => Boolean(c.heading.trim() || c.text.trim() || c.boxes.length);
+
+/** True when "Generate text" has something to write for this box. */
+export const wantsDraft = (x) =>
+  !hasDraft(x) &&
+  x.treatment !== "verbatim" &&
+  Boolean(x.text.trim() || (x.boxes || []).some((b) => !(b.title.trim() && b.text.trim())));
+
+const BULLET_RE = /^\s*[-*\u2022\u2013]\s+/;
+const MARKER_RE = /^\s*\[(ACTION|INFO)\]\s*/i;
+
+/** Mirror of text_to_blocks in backend/app/generate.py, for the preview. */
+export function textToBlocks(text) {
+  const blocks = [];
+  let bullets = [];
+  const flush = () => {
+    if (bullets.length) blocks.push({ kind: "bullets", items: bullets });
+    bullets = [];
+  };
+  for (const raw of String(text || "").split("\n")) {
+    const line = raw.trimEnd();
+    if (!line.trim()) {
+      flush();
+      continue;
+    }
+    const m = line.match(MARKER_RE);
+    if (m) {
+      flush();
+      const kind = m[1].toUpperCase() === "ACTION" ? "action_box" : "info_box";
+      const body = line.replace(MARKER_RE, "").trim();
+      const cut = body.indexOf(":");
+      const rest = cut >= 0 ? body.slice(cut + 1).trim() : "";
+      blocks.push(
+        rest
+          ? { kind, title: body.slice(0, cut).trim(), text: rest }
+          : { kind, title: kind === "action_box" ? "Action required" : "Good to know", text: body }
+      );
+      continue;
+    }
+    if (BULLET_RE.test(line)) {
+      bullets.push(line.replace(BULLET_RE, "").trim());
+      continue;
+    }
+    flush();
+    blocks.push({ kind: "body", text: line.trim() });
+  }
+  flush();
+  return blocks;
+}
+
+/** Generated blocks back to the editable text form textToBlocks reads. */
+export function blocksToText(blocks) {
+  const out = [];
+  for (const b of blocks || []) {
+    if (b.kind === "bullets") {
+      if (out.length) out.push("");
+      out.push(...b.items.map((t) => "- " + t));
+      out.push("");
+    } else if (b.kind === "body") out.push(b.text);
+    else out.push(`[${b.kind === "action_box" ? "ACTION" : "INFO"}] ${b.title}: ${b.text}`);
+  }
+  return out.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+}
+
+/** Boxes that still need text written, in the layout that is active. */
+export function pendingDrafts(s) {
+  return s.layout === "one_pager"
+    ? [...s.cards.filter(cardFilled), ...s.news.filter(newsFilled)].filter(wantsDraft)
+    : s.chapters.filter(chapterUsed).filter(wantsDraft);
+}
+
+/**
+ * Store a /api/draft response on the boxes it was written for. The response
+ * lists the used boxes in the order toPayload sent them, so they are matched
+ * by position. Boxes that already had a draft keep it.
+ */
+export function applyDrafts(s, res) {
+  const put = (items, used, rendered, toText) => {
+    let k = 0;
+    return items.map((x) => {
+      if (!used(x)) return x;
+      const r = rendered[k++];
+      if (!r || !wantsDraft(x)) return x;
+      return { ...x, draft: toText(r), draftFrom: x.text };
+    });
+  };
+  if (s.layout === "one_pager")
+    return {
+      ...s,
+      cards: put(s.cards, cardFilled, res.cards || [], (r) => blocksToText(r.blocks)),
+      news: put(s.news, newsFilled, res.news || [], (r) => r.lines.join("\n")),
+    };
+  return {
+    ...s,
+    chapters: put(s.chapters, chapterUsed, res.chapters || [], (r) => blocksToText(r.blocks)),
+  };
+}
+
 /** The exact object the backend receives. */
 export function toPayload(s) {
   const base = {
@@ -148,15 +261,19 @@ export function toPayload(s) {
     style: s.style,
     layout: s.layout,
     provider: s.provider,
-    chapters: s.chapters
-      .filter((c) => c.heading.trim() || c.text.trim() || c.boxes.length)
-      .map((c) => ({
-        heading: c.heading,
-        treatment: c.treatment,
-        text: c.text,
-        box_policy: c.treatment === "verbatim" ? "none" : c.box_policy,
-        boxes: c.boxes.map((b) => ({ type: b.type, title: b.title, text: b.text })),
-      })),
+    // A box with a draft sends the draft as finished text. For a chapter the
+    // draft already carries its highlight boxes as [ACTION]/[INFO] lines.
+    chapters: s.chapters.filter(chapterUsed).map((c) =>
+      hasDraft(c)
+        ? { heading: c.heading, treatment: "verbatim", text: c.draft, box_policy: "none", boxes: [] }
+        : {
+            heading: c.heading,
+            treatment: c.treatment,
+            text: c.text,
+            box_policy: c.treatment === "verbatim" ? "none" : c.box_policy,
+            boxes: c.boxes.map((b) => ({ type: b.type, title: b.title, text: b.text })),
+          }
+    ),
   };
 
   if (s.layout !== "one_pager") return { ...base, cards: [], news: [] };
@@ -168,10 +285,13 @@ export function toPayload(s) {
     chapters: [],
     cards: s.cards.filter(cardFilled).map((c) => ({
       icon: c.icon, title: c.title, subtitle: c.subtitle,
-      text: c.text, treatment: c.treatment,
+      text: hasDraft(c) ? c.draft : c.text,
+      treatment: hasDraft(c) ? "verbatim" : c.treatment,
     })),
     news: s.news.filter(newsFilled).map((n) => ({
-      icon: n.icon, label: n.label, text: n.text, treatment: n.treatment,
+      icon: n.icon, label: n.label,
+      text: hasDraft(n) ? n.draft : n.text,
+      treatment: hasDraft(n) ? "verbatim" : n.treatment,
     })),
   };
 }

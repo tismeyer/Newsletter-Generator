@@ -299,3 +299,23 @@ textarea.inline-field.grow{display:block;resize:none;overflow:hidden;min-height:
 .iconmenu img{width:26px;height:26px}
 .iconmenu span{font-size:10px;color:var(--muted);line-height:1.15;text-align:center}
 .iconmenu button.on span{color:var(--ink);font-weight:700}
+
+/* --- generated text: edit in place, ask for changes --- */
+.ed-card.drafted{border-left:3px solid #3E6E9E}
+.ed-newsrow.drafted .ed-newstext{border-left:3px solid #3E6E9E;padding-left:7px}
+.revise{margin-top:6px;padding:7px 8px;border:1px solid var(--line);border-radius:3px;background:var(--blueBg);color:#40494F}
+.revise-row{display:flex;gap:6px}
+.revise-row input[type=text]{flex:1;min-width:0;padding:5px 8px;font-size:12.5px;background:#fff;color:#40494F}
+.revise-row .btn{white-space:nowrap}
+.revise-foot{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:4px;font-size:11.5px;color:#5b6670}
+.revise-foot .spacer{flex:1}
+.revise-foot .btn.link{font-size:11.5px;padding:0}
+.revise-foot .stale{color:#A66A00;font-weight:700}
+.mynotes{font-size:11.5px;color:var(--muted)}
+.mynotes summary{cursor:pointer}
+.mynotes[open]{flex-basis:100%}
+.mynotes .ed-notes{width:100%;margin-top:4px;font-size:12px;background:var(--panel);border-color:var(--line)}
+.draftpanel{margin-top:12px;padding:10px;border:1px solid var(--line);border-left:3px solid #3E6E9E;border-radius:3px;background:#fff;color:#40494F}
+.draftlabel{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}
+.draftpanel textarea.draftbody{width:100%;font-size:13px;line-height:1.5;padding:6px 8px;border-color:var(--line);background:#fff}
+.tag.ready{color:#3E6E9E;border-color:#3E6E9E}

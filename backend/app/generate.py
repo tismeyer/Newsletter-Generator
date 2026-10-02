@@ -8,13 +8,20 @@ from __future__ import annotations
 import asyncio
 import re
 
-from .prompts import HOUSE_STYLE, box_prompt, chapter_prompt, effective_box_policy
+from .prompts import (
+    HOUSE_STYLE,
+    box_prompt,
+    chapter_prompt,
+    effective_box_policy,
+    revise_prompt,
+)
 from .providers import GenerationError, Provider
 from .schemas import (
     Card,
     Chapter,
     DocumentRequest,
     NewsItem,
+    ReviseRequest,
     RenderedBlock,
     RenderedCard,
     RenderedChapter,
@@ -28,7 +35,7 @@ BULLET_RE = re.compile(r"^\s*[-*\u2022\u2013]\s+")
 # proofread will sometimes return the surrounding scaffolding as if it were part
 # of the text, so it is removed here as well as forbidden in the prompt.
 SCAFFOLD_RE = re.compile(
-    r"^\s*(?:</?(?:text|heading)>"
+    r"^\s*(?:</?(?:text|heading|notes|request)>"
     r"|-{2,}\s*(?:editor'?s text|end)\s*-{2,}"
     r"|(?:chapter )?heading\s*:.*"
     r"|corrected text\s*:.*)\s*$",
@@ -173,3 +180,16 @@ async def build_one_pager(req: DocumentRequest, provider: Provider):
     rendered_cards = list(await asyncio.gather(*[one_card(i, c) for i, c in enumerate(cards)]))
     rendered_news = list(await asyncio.gather(*[one_news(n) for n in news]))
     return rendered_cards, rendered_news
+
+
+# ---------- revising one box ----------
+
+async def revise(req: ReviseRequest, provider: Provider) -> tuple[str, str]:
+    """Return (text, provider_used) for one box amended as the editor asked."""
+    if provider.name == "manual":
+        raise GenerationError("Asking for changes needs an AI writer. Pick one at the top.")
+    prompt = revise_prompt(
+        req.kind, req.heading, req.notes, req.current, req.instruction, req.style, req.limit
+    )
+    out = await provider.complete(HOUSE_STYLE, prompt, max_tokens=1600)
+    return strip_scaffolding(out), provider.name

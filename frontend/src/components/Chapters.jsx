@@ -1,5 +1,6 @@
-import { Segmented } from "./Bits.jsx";
-import { MAX_CHAPTERS, TREATMENTS, TREATMENT_COPY, newChapter } from "../model.js";
+import { GrowText, Segmented } from "./Bits.jsx";
+import ReviseBar from "./DraftTools.jsx";
+import { MAX_CHAPTERS, TREATMENTS, TREATMENT_COPY, hasDraft, newChapter } from "../model.js";
 
 function BoxRow({ box, onChange, onRemove }) {
   const red = box.type === "action_box";
@@ -27,7 +28,7 @@ function BoxRow({ box, onChange, onRemove }) {
   );
 }
 
-function Chapter({ chapter, index, onChange, onRemove }) {
+function Chapter({ chapter, index, ctx, onChange, onRemove }) {
   const set = (k, v) => onChange({ ...chapter, [k]: v });
   const copy = TREATMENT_COPY[chapter.treatment];
   const locked = chapter.treatment === "verbatim";
@@ -43,6 +44,7 @@ function Chapter({ chapter, index, onChange, onRemove }) {
       <summary>
         <span className="num">{index + 1}</span>
         <span className="ttl">{chapter.heading || "Untitled chapter"}</span>
+        {hasDraft(chapter) && <span className="tag ready">text ready</span>}
         <span className="tag">
           {chapter.boxes.length} box{chapter.boxes.length === 1 ? "" : "es"}
         </span>
@@ -90,22 +92,53 @@ function Chapter({ chapter, index, onChange, onRemove }) {
           </select>
         </label>
 
-        {chapter.boxes.map((b, i) => (
-          <BoxRow
-            key={i}
-            box={b}
-            onChange={(nb) => set("boxes", chapter.boxes.map((x, j) => (j === i ? nb : x)))}
-            onRemove={() => set("boxes", chapter.boxes.filter((_, j) => j !== i))}
-          />
-        ))}
+        {hasDraft(chapter) && (
+          <div className="draftpanel">
+            <span className="draftlabel">Generated text</span>
+            <GrowText
+              className="draftbody"
+              value={chapter.draft}
+              onChange={(v) => set("draft", v)}
+              ariaLabel={"Chapter " + (index + 1) + " generated text"}
+            />
+            <span className="hint block">
+              Lines starting with [ACTION] become a red box and [INFO] a blue box, written as
+              &ldquo;[ACTION] Title: text&rdquo;.
+            </span>
+            <ReviseBar
+              kind="chapter"
+              item={chapter}
+              heading={chapter.heading}
+              {...ctx}
+              onText={(t) => set("draft", t)}
+              onDiscard={() => onChange({ ...chapter, draft: null, draftFrom: "" })}
+            />
+          </div>
+        )}
+
+        {/* Once text is generated its boxes live in it as [ACTION]/[INFO] lines,
+            so the box editors only return with "Back to my notes". */}
+        {!hasDraft(chapter) &&
+          chapter.boxes.map((b, i) => (
+            <BoxRow
+              key={i}
+              box={b}
+              onChange={(nb) => set("boxes", chapter.boxes.map((x, j) => (j === i ? nb : x)))}
+              onRemove={() => set("boxes", chapter.boxes.filter((_, j) => j !== i))}
+            />
+          ))}
 
         <div className="inline mt10">
-          <button type="button" className="btn small" onClick={() => addBox("action_box")}>
-            Add red box
-          </button>
-          <button type="button" className="btn small" onClick={() => addBox("info_box")}>
-            Add blue box
-          </button>
+          {!hasDraft(chapter) && (
+            <>
+              <button type="button" className="btn small" onClick={() => addBox("action_box")}>
+                Add red box
+              </button>
+              <button type="button" className="btn small" onClick={() => addBox("info_box")}>
+                Add blue box
+              </button>
+            </>
+          )}
           <span className="spacer" />
           <button type="button" className="btn link" onClick={onRemove}>
             Remove chapter
@@ -116,8 +149,9 @@ function Chapter({ chapter, index, onChange, onRemove }) {
   );
 }
 
-export default function Chapters({ chapters, patch, notify }) {
+export default function Chapters({ chapters, patch, notify, style, provider }) {
   const set = (next) => patch({ chapters: next });
+  const ctx = { style, provider, notify };
   return (
     <fieldset>
       <legend>
@@ -128,6 +162,7 @@ export default function Chapters({ chapters, patch, notify }) {
           key={c.id}
           chapter={c}
           index={i}
+          ctx={ctx}
           onChange={(nc) => set(chapters.map((x, j) => (j === i ? nc : x)))}
           onRemove={() => set(chapters.filter((_, j) => j !== i))}
         />

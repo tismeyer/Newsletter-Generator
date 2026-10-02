@@ -1,3 +1,5 @@
+import { useEffect, useLayoutEffect, useRef } from "react";
+
 export function Field({ label, hint, children, span }) {
   return (
     <label className="f" style={span ? { gridColumn: "1/-1" } : undefined}>
@@ -54,5 +56,42 @@ export function PickOrType({ options, custom, value, onChange }) {
         />
       )}
     </>
+  );
+}
+
+/** A textarea styled as printed body text that grows with what is typed. */
+export function GrowText({ value, onChange, placeholder, className, ariaLabel }) {
+  const ref = useRef(null);
+  const fit = () => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = "auto";
+    // scrollHeight leaves out the border; add it back or the last line clips.
+    el.style.height = el.scrollHeight + (el.offsetHeight - el.clientHeight) + "px";
+  };
+  useLayoutEffect(fit, [value]);
+  useEffect(() => {
+    // Rewrapping (a card switching between half and full width) changes height too.
+    let width = 0;
+    const ro = new ResizeObserver(([entry]) => {
+      const w = entry.contentRect.width;
+      if (w !== width) {
+        width = w;
+        fit();
+      }
+    });
+    ro.observe(ref.current);
+    return () => ro.disconnect();
+  }, []);
+  return (
+    <textarea
+      ref={ref}
+      rows={1}
+      className={"inline-field grow " + (className || "")}
+      value={value}
+      placeholder={placeholder}
+      aria-label={ariaLabel}
+      onChange={(e) => onChange(e.target.value)}
+    />
   );
 }

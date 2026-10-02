@@ -98,11 +98,20 @@ those.
 | GET    | `/api/providers`| which generators are configured                 |
 | GET    | `/api/budget`   | character allowances for the one-page layout    |
 | POST   | `/api/draft`    | generate text, return it for review             |
+| POST   | `/api/revise`   | amend one generated box as the editor asks      |
 | POST   | `/api/render`   | build the `.docx` from reviewed text            |
 | POST   | `/api/document` | draft and build in one call                     |
 
 Splitting draft from render is deliberate: editors see the generated text before
 it becomes a file, and corrections do not cost another generation.
+
+Once generated, the text is kept on each box (chapter, card or short-news row) in
+the browser. Editors can change it by hand, ask for changes to that one box
+(`/api/revise`, which revises the current text including hand edits), or go back
+to their notes. **Generate text** only writes boxes that have no text yet, and
+**Create document** sends existing text as `verbatim`, so nothing an editor has
+approved is rewritten. In chapters, generated highlight boxes appear in the text
+as `[ACTION] Title: text` and `[INFO] Title: text` lines.
 
 ## Deploying
 

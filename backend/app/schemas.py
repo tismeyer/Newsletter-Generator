@@ -215,3 +215,28 @@ class RenderRequest(BaseModel):
     chapters: list[RenderedChapter] = Field(default_factory=list)
     cards: list[RenderedCard] = Field(default_factory=list)
     news: list[RenderedNews] = Field(default_factory=list)
+
+
+class ReviseRequest(BaseModel):
+    """Amend one already generated box: a chapter, a card or a short-news row."""
+
+    provider: str | None = None
+    style: StyleSpec = Field(default_factory=StyleSpec)
+    kind: Literal["chapter", "card", "news"]
+    heading: str = ""
+    notes: str = ""          # the editor's original notes, for reference
+    current: str             # the text as it stands now, hand edits included
+    instruction: str
+    limit: int | None = None  # character allowance on the one-page layout
+
+    @field_validator("instruction")
+    @classmethod
+    def _needs_instruction(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("say what should change")
+        return v
+
+
+class ReviseResponse(BaseModel):
+    text: str
+    provider_used: str

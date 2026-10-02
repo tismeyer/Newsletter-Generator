@@ -122,3 +122,54 @@ def box_prompt(box_type: str, title: str, text: str, style: StyleSpec) -> str:
         f"Editor's notes: {text.strip() or '(none - use the chapter context only)'}\n\n"
         "Return exactly two lines: the title on line 1, the box text on line 2."
     )
+
+
+REVISE_KIND = {
+    "chapter": "one chapter of the publication",
+    "card": "one card of a single-page bulletin",
+    "news": "one short-news item of a single-page bulletin (two or three short lines)",
+}
+
+
+def revise_prompt(kind: str, heading: str, notes: str, current: str,
+                  instruction: str, style: StyleSpec, limit: int | None) -> str:
+    """Prompt for amending text the editor has already seen.
+
+    The current text is the starting point, not the notes: the editor may have
+    corrected it by hand, and those corrections must survive the revision.
+    """
+    if kind == "chapter":
+        markers = (
+            "Lines starting with [ACTION] or [INFO] are highlight boxes, written "
+            "as '[ACTION] Title: text'. Keep that exact format for any box you "
+            "keep, and do not add more than one new box."
+        )
+    else:
+        markers = "Do not add highlight boxes or markers of any kind."
+    rules = style_block(style)
+    if kind != "chapter":
+        # The per-chapter word count means nothing for a card; the limit governs.
+        rules = "\n".join(l for l in rules.split("\n") if l != "- " + LENGTH[style.length])
+    hard_limit = ""
+    if limit:
+        hard_limit = (
+            f"\nHard limit: the result must not exceed {limit} characters, "
+            "including spaces, or it will not fit on the page."
+        )
+    return (
+        f"Below is the current text of {REVISE_KIND[kind]}, and the editor's "
+        "request for changes. Rewrite the text so it satisfies the request. "
+        "Change only what the request asks for or clearly implies; keep "
+        "everything else, including wording the editor may have corrected by "
+        "hand. Facts stated in the request may be used as well as those in the "
+        "text and the original notes; never invent any others.\n"
+        "Output the revised text only, with no preface, tags or commentary. "
+        "Do not repeat the heading.\n"
+        f"{markers}\n"
+        "Write in this style unless the request says otherwise:\n"
+        f"{rules}{hard_limit}\n\n"
+        f"<heading>{heading or '(none)'}</heading>\n"
+        f"<notes>\n{notes.strip() or '(none)'}\n</notes>\n"
+        f"<request>\n{instruction.strip()}\n</request>\n"
+        f"<text>\n{current.strip()}\n</text>"
+    )

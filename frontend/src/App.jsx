@@ -4,8 +4,8 @@ import StylePanel from "./components/StylePanel.jsx";
 import Chapters from "./components/Chapters.jsx";
 import OnePager from "./components/OnePager.jsx";
 import Preview from "./components/Preview.jsx";
-import { LAYOUTS, emptyState, toPayload } from "./model.js";
-import { draft, getProviders, renderDocx } from "./api.js";
+import { LAYOUTS, applyDrafts, emptyState, pendingDrafts, toPayload } from "./model.js";
+import { draft, getProviders, renderDocument } from "./api.js";
 
 const DRAFT_KEY = "nlb:draft";
 
@@ -17,15 +17,13 @@ const PROVIDER_LABEL = {
 
 export default function App() {
   const [state, setState] = useState(emptyState);
-  const [drafted, setDrafted] = useState(null);
   const [providers, setProviders] = useState({ available: { manual: true }, default: "manual" });
   const [busy, setBusy] = useState("");
   const [msg, setMsg] = useState("");
 
-  const patch = (p) => {
-    setState((s) => ({ ...s, ...p }));
-    setDrafted(null); // any edit invalidates the generated text
-  };
+  // Generated text lives on each box (see model.js), so edits elsewhere no
+  // longer throw it away.
+  const patch = (p) => setState((s) => ({ ...s, ...p }));
   const notify = (t) => {
     setMsg(t);
     setTimeout(() => setMsg(""), 2600);
@@ -47,6 +45,10 @@ export default function App() {
       ? payload.cards.length || payload.news.length
       : payload.chapters.length;
 
+  // Writes text for every box that has none yet. Boxes that already have
+  // text are left alone, so revisions and hand edits survive.
+  const generate = async (s) => applyDrafts(s, await draft(toPayload(s)));
+
   const onDraft = async () => {
     if (!hasContent)
       return notify(
@@ -54,10 +56,12 @@ export default function App() {
           ? "Fill at least one card or short-news row first."
           : "Add at least one chapter first."
       );
+    if (!pendingDrafts(state).length)
+      return notify("Every box already has text. Use \u201cBack to my notes\u201d on a box to write it again.");
     setBusy("draft");
     try {
-      setDrafted(await draft(payload));
-      notify("Text generated. Review it, then create the document.");
+      setState(await generate(state));
+      notify("Text written. Edit it in place, or ask for changes box by box.");
     } catch (e) {
       notify(e.message);
     } finally {
@@ -66,11 +70,20 @@ export default function App() {
   };
 
   const onRender = async () => {
+    if (!hasContent)
+      return notify(
+        state.layout === "one_pager"
+          ? "Fill at least one card or short-news row first."
+          : "Add at least one chapter first."
+      );
     setBusy("render");
     try {
-      const source = drafted ?? (await draft(payload));
-      setDrafted(source);
-      const name = await renderDocx(source.masthead, source.chapters);
+      let s = state;
+      if (pendingDrafts(s).length) {
+        s = await generate(s);
+        setState(s);
+      }
+      const name = await renderDocument(toPayload(s));
       notify(`Downloaded ${name}`);
     } catch (e) {
       notify(e.message);
@@ -93,7 +106,6 @@ export default function App() {
       const raw = localStorage.getItem(DRAFT_KEY);
       if (!raw) return notify("No saved draft found.");
       setState(JSON.parse(raw));
-      setDrafted(null);
       notify("Draft loaded.");
     } catch {
       notify("The saved draft could not be read.");
@@ -133,11 +145,6 @@ export default function App() {
 
       <div className="split">
         <div className="editor">
-          {drafted && (
-            <div className="note">
-              Showing generated text. Editing any field clears it and you can generate again.
-            </div>
-          )}
           <fieldset>
             <legend>Layout</legend>
             <div className="seg" role="group" aria-label="Layout">
@@ -160,9 +167,15 @@ export default function App() {
           <Masthead state={state} patch={patch} />
           <StylePanel style={state.style} patch={patch} />
           {state.layout === "one_pager" ? (
-            <OnePager state={state} patch={patch} />
+            <OnePager state={state} patch={patch} notify={notify} />
           ) : (
-            <Chapters chapters={state.chapters} patch={patch} notify={notify} />
+            <Chapters
+              chapters={state.chapters}
+              patch={patch}
+              notify={notify}
+              style={state.style}
+              provider={state.provider}
+            />
           )}
           <fieldset>
             <legend>Payload sent to the backend</legend>
@@ -171,7 +184,7 @@ export default function App() {
         </div>
 
         <aside className="stage">
-          <Preview state={state} drafted={drafted} />
+          <Preview state={state} />
         </aside>
       </div>
 

@@ -1,15 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import logo from "../assets/logo.png";
 import icon from "../assets/icon.png";
-import { cardFilled, departmentFrom, fmtDate, newsFilled } from "../model.js";
+import { cardFilled, departmentFrom, fmtDate, hasDraft, newsFilled, textToBlocks } from "../model.js";
 import { isFullWidth } from "../budget.js";
 import { ICON_SRC } from "../icons.js";
 
 const SHEET_W = 794; // A4 at 96 dpi
 
 /** Rough client-side view of what the chapter will look like on the page. */
-function ChapterPreview({ chapter, drafted }) {
-  const blocks = drafted?.blocks;
+function ChapterPreview({ chapter }) {
+  const blocks = hasDraft(chapter) ? textToBlocks(chapter.draft) : null;
   const body = () => {
     if (blocks) {
       return blocks.map((b, i) => {
@@ -71,13 +71,13 @@ function ChapterPreview({ chapter, drafted }) {
 }
 
 /** Card and short-news preview for the one-page layout. */
-function OnePagerPreview({ state, drafted }) {
-  const cards = drafted ? drafted.cards : state.cards.filter(cardFilled);
-  const news = drafted ? drafted.news : state.news.filter(newsFilled);
+function OnePagerPreview({ state }) {
+  const cards = state.cards.filter(cardFilled);
+  const news = state.news.filter(newsFilled);
 
   const cardInner = (c) => {
-    if (drafted)
-      return c.blocks.map((b, i) =>
+    if (hasDraft(c))
+      return textToBlocks(c.draft).map((b, i) =>
         b.kind === "bullets" ? (
           <ul className="p-ul" key={i}>
             {b.items.map((t, j) => (
@@ -137,7 +137,7 @@ function OnePagerPreview({ state, drafted }) {
             <div className="p-newsrow" key={i}>
               <div className="p-newslabel"><img className="p-icon" src={ICON_SRC[n.icon]} alt="" /><span>{n.label || "Label"}</span></div>
               <div className="p-newstext">
-                {(drafted ? n.lines : (n.text || "").split(/\n+/))
+                {(hasDraft(n) ? n.draft : n.text || "").split(/\n+/)
                   .filter((l) => l.trim())
                   .map((l, j) => (
                     <p key={j}>{l}</p>
@@ -151,7 +151,7 @@ function OnePagerPreview({ state, drafted }) {
   );
 }
 
-export default function Preview({ state, drafted }) {
+export default function Preview({ state }) {
   const wrapRef = useRef(null);
   const sheetRef = useRef(null);
   const [zoom, setZoom] = useState(1);
@@ -174,7 +174,7 @@ export default function Preview({ state, drafted }) {
   return (
     <>
       <div className="stagebar">
-        <span>{drafted ? "Generated text" : "Live preview"}</span>
+        <span>Live preview</span>
         <span className="spacer" />
         <span>{Math.round(zoom * 100)}%</span>
       </div>
@@ -197,10 +197,10 @@ export default function Preview({ state, drafted }) {
           <div className="p-date">{fmtDate(m.publication_date)}</div>
 
           {state.layout === "one_pager" ? (
-            <OnePagerPreview state={state} drafted={drafted} />
+            <OnePagerPreview state={state} />
           ) : (
-            visible.map((c, i) => (
-              <ChapterPreview key={c.id} chapter={c} drafted={drafted?.chapters?.[i]} />
+            visible.map((c) => (
+              <ChapterPreview key={c.id} chapter={c} />
             ))
           )}
 

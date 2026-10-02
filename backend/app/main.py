@@ -8,11 +8,18 @@ from fastapi.responses import Response
 
 from .config import settings
 from .budget import budget as compute_budget
-from .generate import build_draft, build_one_pager
+from .generate import build_draft, build_one_pager, revise as revise_box
 from .providers import GenerationError, available, get_provider
 from .render.onepager import render_one_pager
 from .render.renderer import filename_for, render_document
-from .schemas import DocumentRequest, DraftResponse, Layout, RenderRequest
+from .schemas import (
+    DocumentRequest,
+    DraftResponse,
+    Layout,
+    RenderRequest,
+    ReviseRequest,
+    ReviseResponse,
+)
 
 log = logging.getLogger("newsletter")
 app = FastAPI(title="Newsletter Builder", version="1.0")
@@ -65,6 +72,22 @@ async def draft(req: DocumentRequest) -> DraftResponse:
     finally:
         await provider.aclose()
     return DraftResponse(masthead=req.masthead, layout=req.layout, chapters=chapters)
+
+
+@app.post("/api/revise", response_model=ReviseResponse)
+async def revise(req: ReviseRequest) -> ReviseResponse:
+    """Amend one generated box as the editor asks, leaving every other box alone."""
+    try:
+        provider = get_provider(req.provider)
+    except GenerationError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    try:
+        text, used = await revise_box(req, provider)
+    except GenerationError as e:
+        raise HTTPException(status_code=502, detail=str(e)) from e
+    finally:
+        await provider.aclose()
+    return ReviseResponse(text=text, provider_used=used)
 
 
 @app.post("/api/render")
