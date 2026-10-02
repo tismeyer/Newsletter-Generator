@@ -1,5 +1,5 @@
 import logo from "../assets/logo.png";
-import icon from "../assets/icon.png";
+import wizard from "../assets/rosie-newsletter.webp";
 import rosie from "../assets/rosie.jpg";
 
 const TOOLS = [
@@ -8,15 +8,15 @@ const TOOLS = [
     img: rosie,
     round: true,
     title: "Write manual content",
-    by: "Rosie for Editors",
+    by: "Rosie's APM Editor",
     text: "Turn your notes into APM-conformant text for the manuals. Rosie follows the APM language and WebManuals rules, checks the result and marks anything to confirm.",
     go: "Open Rosie",
   },
   {
     href: "#/newsletter",
-    img: icon,
+    img: wizard,
     title: "Write a newsletter",
-    by: "Newsletter Builder",
+    by: "Rosie's Newsletter Wizard",
     text: "Newsletters, bulletins and 1-page bulletins in the Helvetic layout, from your notes or an existing Word file, ready as a Word document.",
     go: "Open the builder",
   },
