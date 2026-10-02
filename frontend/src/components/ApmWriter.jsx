@@ -157,6 +157,22 @@ function forPaste(html) {
     while (i >= 0 && own[i].nodeType === 3 && !own[i].textContent.trim() && !own[i].textContent.includes("\u00a0")) i--;
     if (i >= 1 && isBlank(own[i]) && own[i - 1].nodeName === "BR") own[i].replaceWith(doc.createElement("br"));
   });
+  // WebManuals drops the space after a list, so the last bullet carries its
+  // own blank line when more text follows (a Note/Caution table gets an empty
+  // paragraph below instead).
+  doc.querySelectorAll("ul,ol").forEach((list) => {
+    if (list.parentElement?.closest("li")) return;
+    let next = list.nextSibling;
+    while (isBlank(next)) next = next.nextSibling;
+    if (!next || next.nodeName === "TABLE") return;
+    if (next.nodeName === "P" && !next.textContent.replace(/[\s\u00a0]/g, "")) return;
+    const last = [...list.children].filter((c) => c.nodeName === "LI").pop();
+    if (!last) return;
+    let end = last.lastChild;
+    while (end && end.nodeType === 3 && !end.textContent.trim()) end = end.previousSibling;
+    if (end && end.nodeName === "BR") return;
+    last.append(doc.createElement("br"), doc.createElement("br"));
+  });
   doc.querySelectorAll("table").forEach((t) => {
     let prev = t.previousSibling;
     while (isBlank(prev)) prev = prev.previousSibling;
