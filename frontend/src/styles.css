@@ -410,3 +410,86 @@ textarea.inline-field.grow{display:block;resize:none;overflow:hidden;min-height:
 .importbanner .ib-foot{margin-top:6px;font-size:12px;color:var(--muted)}
 .appbar .tools .btn{white-space:nowrap}
 .ed-cardslot > .flagnotes{margin:6px 0 0}
+
+/* ---------- pages ---------- */
+[hidden]{display:none !important}
+#root{height:100%}
+.page{height:100%}
+.page-fill{display:contents}
+.homelink{align-self:center;font-size:12.5px;color:var(--muted);text-decoration:none;white-space:nowrap;
+  padding:3px 8px 3px 0;margin-right:2px;border-right:1px solid var(--line)}
+.homelink:hover{color:var(--red)}
+
+/* ---------- start page ---------- */
+.landing{min-height:100%;padding:56px 16px 64px;display:flex;flex-direction:column;align-items:center}
+.ld-head{text-align:center;margin-bottom:34px}
+.ld-logo{height:34px;margin-bottom:22px}
+.ld-head h1{margin:0;font-size:28px;color:var(--navy);letter-spacing:-.01em}
+.ld-head p{margin:6px 0 0;color:var(--muted);font-size:15px}
+.ld-tiles{display:grid;grid-template-columns:repeat(2,minmax(0,360px));gap:22px;width:100%;justify-content:center}
+@media (max-width:760px){.ld-tiles{grid-template-columns:minmax(0,420px)}}
+.ld-tile{display:flex;flex-direction:column;gap:6px;padding:26px 26px 22px;background:var(--panel);
+  border:1px solid var(--line);border-top:4px solid var(--red);border-radius:3px;color:inherit;text-decoration:none;
+  transition:box-shadow .15s, transform .15s}
+.ld-tile:hover{box-shadow:0 8px 24px rgba(0,0,0,.12);transform:translateY(-2px)}
+.ld-img{width:64px;height:64px;object-fit:contain;margin-bottom:10px}
+.ld-img.round{border-radius:50%;object-fit:cover;object-position:center 12%;border:2px solid #b5852a}
+.ld-by{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.ld-title{font-size:20px;font-weight:700;color:var(--red)}
+.ld-text{font-size:13.5px;line-height:1.55;flex:1}
+.ld-go{margin-top:12px;font-weight:700;color:var(--navy);font-size:13.5px}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .ld-head h1,:root:not([data-theme="light"]) .ld-go{color:var(--ink)}}
+:root[data-theme="dark"] .ld-head h1,:root[data-theme="dark"] .ld-go{color:var(--ink)}
+
+/* ---------- Rosie for Editors ---------- */
+.apm-avatar{width:30px;height:30px;border-radius:50%;object-fit:cover;object-position:center 12%;
+  border:2px solid #b5852a;align-self:center}
+.apm-tabs{align-self:center}
+.apm-tabs button{padding:5px 14px}
+.apm-notes{min-height:280px;resize:vertical;line-height:1.55}
+.apm-go{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.apm-empty{max-width:420px;margin-top:60px;text-align:center;color:var(--muted)}
+.apm-empty img{width:96px;height:96px;border-radius:50%;object-fit:cover;object-position:center 12%;border:2px solid #b5852a}
+.apm-paper{width:100%;max-width:794px;background:#fff;color:#2b2f33;border:1px solid var(--line);
+  box-shadow:0 2px 10px rgba(0,0,0,.08)}
+.apm-paperbar{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid #e3e6e8;background:#fafbfb}
+.apm-paperbar .spacer,.apm-cardhead .spacer{flex:1}
+.apm-label{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#848687}
+.apm-draft{padding:22px 28px 28px;font:13.5px/1.6 Arial, Helvetica, sans-serif;overflow-x:auto}
+.apm-draft.plain{margin:0;white-space:pre-wrap}
+.apm-draft h1,.apm-draft h2,.apm-draft h3,.apm-draft h4{color:#0B2545;margin:1em 0 .4em;line-height:1.3}
+.apm-draft h1:first-child,.apm-draft h2:first-child,.apm-draft h3:first-child{margin-top:0}
+.apm-draft table{border-collapse:collapse;margin:.6em 0}
+.apm-draft td,.apm-draft th{border:1px solid #c9cdd0;padding:4px 8px;vertical-align:top}
+.apm-card{width:100%;max-width:794px;background:var(--panel);border:1px solid var(--line);border-radius:3px;padding:12px 14px}
+.apm-cardhead{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.apm-badge{font-size:11.5px;font-weight:700;padding:1px 8px;border-radius:10px}
+.apm-badge.error{background:#FBE7EA;color:#B00020}
+.apm-badge.warning{background:#FFF3D6;color:#7a5600}
+.apm-badge.info{background:#E7EEF5;color:#2d5680}
+.apm-badge.clear{background:#E3F3E8;color:#1E6B34}
+.apm-clear{margin:0;color:#1E6B34}
+.apm-viol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.apm-viol li{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:baseline;padding:7px 10px;
+  border-left:3px solid var(--line);background:var(--shell);border-radius:2px;font-size:13px}
+.apm-viol li.error{border-left-color:#E4032E}
+.apm-viol li.warning{border-left-color:#E0A800}
+.apm-viol li.info{border-left-color:#3E6E9E}
+.apm-sev{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.apm-ctx{font-size:12px;color:var(--muted);font-style:italic;margin-top:2px}
+.apm-rule{font:11px/1 ui-monospace,Menlo,Consolas,monospace;color:var(--muted)}
+.apm-sources{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.apm-cite{font-weight:700;font-size:12.5px;color:var(--navy)}
+.apm-snip{font-size:12px;color:var(--muted)}
+.apm-manuals{max-width:980px;margin:0 auto;padding:22px 16px 80px}
+.apm-uprow{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px}
+.apm-uprow input[type=file]{flex:1;min-width:200px}
+.apm-progress{margin-top:12px;padding:10px 12px;border-radius:3px;background:var(--panel);border:1px solid var(--line);font-size:13px}
+.apm-progress.ok{border-color:#9fd3ae;background:#E3F3E8;color:#1E6B34}
+.apm-progress.error{border-color:#f0a9b5;background:#FBE7EA;color:#B00020}
+.apm-bar{height:6px;background:var(--shell2);border-radius:3px;margin-top:8px;overflow:hidden}
+.apm-bar div{height:100%;background:var(--red);transition:width .4s}
+.apm-table{width:100%;border-collapse:collapse;font-size:13px;background:var(--panel)}
+.apm-table th{text-align:left;font-size:11.5px;color:var(--muted);font-weight:700;padding:6px 8px;border-bottom:1px solid var(--line)}
+.apm-table td{padding:7px 8px;border-bottom:1px solid var(--line)}
+@media (max-width:640px){.apm-table{display:block;overflow-x:auto}}

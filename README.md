@@ -8,9 +8,15 @@ The design lives in `backend/app/assets/template.docx` and nowhere else. To
 change how documents look, edit that file in Word — no code changes.
 
 ```
-frontend/   React + Vite. The form, the live A4 preview, the download.
-backend/    FastAPI. Prompts, providers, .docx rendering.
+frontend/   React + Vite. Start page, Newsletter Builder, and the Rosie for Editors page.
+backend/    FastAPI. Newsletter prompts, providers, .docx rendering.
+apm/        Rosie for Editors' own server (APM ruleset, checker, manual store).
 ```
+
+The website opens on a start page with two choices: **Write manual content**
+(`#/apm`, Rosie for Editors) and **Write a newsletter** (`#/newsletter`). Rosie
+runs as a separate Railway service from `apm/`; see `apm/README.md`. The
+Rosie page finds it through `VITE_APM_API_BASE` in Vercel.
 
 ## Running locally
 

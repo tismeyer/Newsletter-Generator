@@ -97,6 +97,7 @@ export default function App() {
   return (
     <>
       <header className="appbar">
+        <a className="homelink" href="#/" title="Back to the start page">&larr; All tools</a>
         <h1>Newsletter Builder</h1>
         <span className="sub">Helvetic Airways &mdash; internal publications</span>
         <span className="spacer" />

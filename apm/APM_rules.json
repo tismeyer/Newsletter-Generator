@@ -1,0 +1,418 @@
+{
+  "_meta": {
+    "title": "helvetic APM machine-readable ruleset",
+    "version": "0.1",
+    "scope": "APM Chapter 1 (language, all publications) and Chapter 3.2 (WebManuals styling)",
+    "source_document": "APM - Administrative Procedure Manual, Issue 01 Rev 19 (06.01.2026)",
+    "generated_for": "generate-check pipeline: generator consumes 'prompt_fragment', verifier consumes 'check'"
+  },
+  "_schema": {
+    "description": "Each object in 'rules' has the fields below.",
+    "fields": {
+      "id": "stable identifier, matches the markdown ruleset",
+      "source": "APM section(s) the rule derives from",
+      "category": "terminology | capitalisation | grammar | tone | units | references | bullets | line_breaks | headings | tables | notes | colours | cross_references | emphasis | process",
+      "type": "'deterministic' (mechanically verifiable) or 'judgment' (needs interpretation)",
+      "target": "'text' (prose), 'html' (structured output), or 'both'",
+      "severity": "suggested checker default: 'error' | 'warning' | 'info'",
+      "conditional": "true if correctness depends on surrounding context/state, not a line-by-line match",
+      "statement": "human-readable rule",
+      "prompt_fragment": "terse instruction injected into the generator system prompt; present for every rule",
+      "check": "verifier spec; present only where automatable. 'kind' dispatches the check."
+    },
+    "check_kinds": {
+      "term_map": "terms[]: {correct, forbidden[], case_sensitive?, automatable?, notes?}",
+      "forbidden_pattern": "pattern (regex), suggestion?, message, automatable?",
+      "context_requirement": "trigger (regex), requires (text), automatable ('partial'|'full')",
+      "unit_spacing": "rule (text), exceptions[]",
+      "style_constant": "property, value (a value the generator/styler must emit; verify against html)",
+      "html_structure": "description, automatable ('partial'|'full')",
+      "consolidated": "ref (id) — literal check lives under another rule to avoid double-flagging"
+    }
+  },
+  "rules": [
+
+    { "id": "SEM-A0-01", "source": "APM 1.0, 1.3.5.1", "category": "tone", "type": "judgment", "target": "text", "severity": "info", "conditional": false,
+      "statement": "Target reader is a non-native English speaker with average English but good aviation knowledge; match complexity accordingly.",
+      "prompt_fragment": "Write for a non-native English speaker with average English and good aviation knowledge; keep complexity appropriate to that reader." },
+
+    { "id": "SEM-A0-02", "source": "APM 1.0", "category": "tone", "type": "judgment", "target": "text", "severity": "info", "conditional": false,
+      "statement": "Fact-/evidence-based, professional, respectful; clear, concise, exact and distinct.",
+      "prompt_fragment": "Be fact-based, professional and respectful; write clear, concise, exact and distinct sentences." },
+
+    { "id": "SEM-A0-03", "source": "APM 1.3.5.1", "category": "tone", "type": "judgment", "target": "text", "severity": "warning", "conditional": false,
+      "statement": "No nested/convoluted sentences (no Schachtelsaetze).",
+      "prompt_fragment": "Avoid long nested sentences; prefer short, direct constructions." },
+
+    { "id": "SEM-A0-04", "source": "APM 1.3.5.2", "category": "tone", "type": "judgment", "target": "text", "severity": "warning", "conditional": false,
+      "statement": "Do not use directly translated Swiss German.",
+      "prompt_fragment": "Do not use directly translated Swiss German phrasing or word order." },
+
+    { "id": "SEM-A1-01", "source": "APM 1.2.1", "category": "terminology", "type": "deterministic", "target": "text", "severity": "error", "conditional": false,
+      "statement": "'helvetic' (brand) is always lowercase, even at the start of a sentence/title; never italic.",
+      "prompt_fragment": "Always write the brand as lowercase 'helvetic', even at the start of a sentence or title, and never in italics. Capitalise only inside the legal name 'Helvetic Airways AG'.",
+      "check": { "kind": "consolidated", "ref": "SEM-A6", "notes": "Helvetic/helvetic literal check lives in the term table; italic check requires html target." } },
+
+    { "id": "SEM-A1-02", "source": "APM 1.2.1, 1.3.6.3", "category": "terminology", "type": "deterministic", "target": "text", "severity": "error", "conditional": false,
+      "statement": "Capitalise 'Helvetic' only within the full legal name 'Helvetic Airways AG' (or 'Helvetic Airways').",
+      "prompt_fragment": "Use the capitalised 'Helvetic' only as part of 'Helvetic Airways AG' or 'Helvetic Airways'.",
+      "check": { "kind": "consolidated", "ref": "SEM-A6" } },
+
+    { "id": "SEM-A1-03", "source": "APM 1.2.1", "category": "terminology", "type": "deterministic", "target": "text", "severity": "error", "conditional": false,
+      "statement": "Forbidden mixed company-name forms: 'helvetic Airways', 'Helvetic airways', 'helvetic airways'.",
+      "prompt_fragment": "Never use mixed forms such as 'helvetic Airways', 'Helvetic airways' or 'helvetic airways'.",
+      "check": { "kind": "forbidden_pattern", "pattern": "\\b(helvetic Airways|Helvetic airways|helvetic airways)\\b", "suggestion": "helvetic | Helvetic Airways AG", "message": "Mixed company-name form.", "automatable": "full" } },
+
+    { "id": "SEM-A1-04", "source": "APM 1.2.2", "category": "terminology", "type": "deterministic", "target": "text", "severity": "error", "conditional": true,
+      "statement": "Use 'helvetic Part-145' (lowercase helvetic, capital P, hyphen). May shorten to 'Part-145' after first mention in a chapter.",
+      "prompt_fragment": "Write 'helvetic Part-145' on first mention in a chapter; thereafter 'Part-145' alone is acceptable. Never 'Part M', 'Part-M' or 'part 145'.",
+      "check": { "kind": "forbidden_pattern", "pattern": "\\b(part 145|Part M|Part-M)\\b", "suggestion": "helvetic Part-145 / Part-145", "message": "Incorrect Part-145 form.", "automatable": "full" } },
+
+    { "id": "SEM-A1-05", "source": "APM 1.2.2", "category": "terminology", "type": "deterministic", "target": "text", "severity": "error", "conditional": false,
+      "statement": "Forbidden: 'Part M', 'Part-M'.",
+      "prompt_fragment": "Do not use 'Part M' or 'Part-M'.",
+      "check": { "kind": "consolidated", "ref": "SEM-A1-04" } },
+
+    { "id": "SEM-A2-01", "source": "APM 1.3.3.1", "category": "capitalisation", "type": "deterministic", "target": "text", "severity": "warning", "conditional": false,
+      "statement": "Countries, places and languages are capitalised (Switzerland, Zurich, Swedish, British).",
+      "prompt_fragment": "Capitalise names of countries, places and languages." },
+
+    { "id": "SEM-A2-02", "source": "APM 1.3.3.2", "category": "capitalisation", "type": "judgment", "target": "text", "severity": "warning", "conditional": false,
+      "statement": "Titles: first word capitalised and all nouns/subjects capitalised (e.g. 'Recent Experience for Flight Crew').",
+      "prompt_fragment": "In titles, capitalise the first word and every noun and subject (e.g. 'Recent Experience for Flight Crew')." },
+
+    { "id": "SEM-A2-03", "source": "APM 1.3.3.3", "category": "capitalisation", "type": "judgment", "target": "text", "severity": "warning", "conditional": false,
+      "statement": "General function descriptions are lowercase ('flight crews', 'nominated persons').",
+      "prompt_fragment": "Write general function descriptions in lowercase ('flight crews', 'nominated persons')." },
+
+    { "id": "SEM-A2-04", "source": "APM 1.3.3.3", "category": "capitalisation", "type": "judgment", "target": "text", "severity": "warning", "conditional": false,
+      "statement": "Specific job titles are capitalised and followed by the abbreviation in brackets on first use (e.g. 'Safety Manager (SM)').",
+      "prompt_fragment": "Capitalise specific job titles and give the abbreviation in brackets on first use (e.g. 'Head of Inflight Product (HIP)')." },
+
+    { "id": "SEM-A3-01", "source": "APM 1.3.4", "category": "grammar", "type": "deterministic", "target": "text", "severity": "warning", "conditional": false,
+      "statement": "All abbreviations are written in capitals (FOP, ACM, HIP).",
+      "prompt_fragment": "Write all abbreviations in capitals." },
+
+    { "id": "SEM-A3-02", "source": "APM 1.3.4", "category": "grammar", "type": "judgment", "target": "text", "severity": "warning", "conditional": true,
+      "statement": "On first use, give the full designation followed by the abbreviation in brackets ('Emergency Response Plan (ERP)').",
+      "prompt_fragment": "Introduce each abbreviation on first use as 'Full Designation (ABBR)', then use the abbreviation alone thereafter." },
+
+    { "id": "SEM-A3-03", "source": "APM 1.3.4", "category": "grammar", "type": "deterministic", "target": "text", "severity": "info", "conditional": false,
+      "statement": "When used alone (after introduction), abbreviations are capitals with no brackets.",
+      "prompt_fragment": "After introduction, use the abbreviation in capitals without brackets." },
+
+    { "id": "SEM-A3-04", "source": "APM 1.3.4", "category": "grammar", "type": "judgment", "target": "text", "severity": "warning", "conditional": true,
+      "statement": "Stand-alone abbreviations (never expanded) only if undoubtedly well-known (ATC, ZRH, LX) and/or set as an active tooltip abbreviation.",
+      "prompt_fragment": "Use a stand-alone, unexplained abbreviation only when it is universally known in aviation (e.g. ATC, ZRH, LX)." },
+
+    { "id": "SEM-A4-01", "source": "APM 1.3.5.1", "category": "grammar", "type": "judgment", "target": "text", "severity": "warning", "conditional": false,
+      "statement": "No imperatives/command tone (Befehlston); use passive voice. e.g. 'cleaning staff shall be instructed to', not 'instruct cleaning staff to'.",
+      "prompt_fragment": "Use passive, fact-based voice rather than imperatives: 'X shall be done', not 'do X'." },
+
+    { "id": "SEM-A4-02", "source": "APM 1.3.5.1", "category": "grammar", "type": "deterministic", "target": "text", "severity": "error", "conditional": false,
+      "statement": "'etc.' is forbidden; complete the text and add examples in brackets instead.",
+      "prompt_fragment": "Never use 'etc.'. List the items, adding examples in brackets where helpful.",
+      "check": { "kind": "forbidden_pattern", "pattern": "\\betc\\.?", "suggestion": "complete the list / add '(e.g. ...)'", "message": "'etc.' is not permitted.", "automatable": "full" } },
+
+    { "id": "SEM-A4-03", "source": "APM 1.3.5.1, OMM 2.1.6", "category": "grammar", "type": "judgment", "target": "text", "severity": "info", "conditional": false,
+      "statement": "Count-up/listing logic: in a bullet count-up items are linked by 'and' unless 'or' is explicitly stated between the lines; in a listing 'or' is non-exclusive (one, several, or all may apply).",
+      "prompt_fragment": "Treat bullet count-ups as 'and' unless 'or' is explicitly written; treat 'or' in any listing as non-exclusive." },
+
+    { "id": "SEM-A4-04", "source": "OMM 2.1.6", "category": "grammar", "type": "judgment", "target": "text", "severity": "warning", "conditional": true,
+      "statement": "Modal verbs: 'shall'/'must' (or imperative action verb) = mandatory ('must' is an alternative to 'shall'); 'should' = recommended AND must state the circumstances under which it need not be applied; 'may' = optional.",
+      "prompt_fragment": "Use 'shall'/'must' for mandatory, 'should' for recommended, 'may' for optional. Whenever you write 'should', also state the circumstances under which the provision need not be applied.",
+      "check": { "kind": "context_requirement", "trigger": "\\bshould\\b", "requires": "a nearby clause stating when the provision does not have to be applied", "automatable": "partial" } },
+
+    { "id": "SEM-A4-05", "source": "OMM 2.1.6", "category": "grammar", "type": "judgment", "target": "text", "severity": "info", "conditional": false,
+      "statement": "'approved (by the authority)' = documented by the authority as suitable for the purpose intended; 'accepted/acceptable' = not objected to by the authority as suitable for the purpose intended.",
+      "prompt_fragment": "Use 'approved' = documented by the authority as suitable; 'accepted/acceptable' = not objected to by the authority. Do not interchange them." },
+
+    { "id": "SEM-A4-06", "source": "OMM 2.1.6", "category": "grammar", "type": "deterministic", "target": "text", "severity": "info", "conditional": false,
+      "statement": "'bi-weekly' means every two weeks; the 'bi-' convention applies to any time interval.",
+      "prompt_fragment": "Use 'bi-weekly' to mean every two weeks (the 'bi-' convention applies to any interval)." },
+
+    { "id": "SEM-A5-01", "source": "APM 1.3.5.2", "category": "grammar", "type": "deterministic", "target": "text", "severity": "error", "conditional": false,
+      "statement": "No contractions; use full forms ('do not', 'will not', 'it is').",
+      "prompt_fragment": "Never use contractions; always write full forms ('do not', 'will not', 'it is').",
+      "check": { "kind": "forbidden_pattern", "pattern": "\\b\\w+(?:'|\\u2019)(?:t|s|re|ve|ll|d|m)\\b", "suggestion": "use the full form", "message": "Contraction not permitted.", "automatable": "partial", "notes": "Excludes genitives like UFO's which are valid; review flags." } },
+
+    { "id": "SEM-A5-02", "source": "APM 1.3.5.2", "category": "grammar", "type": "deterministic", "target": "text", "severity": "warning", "conditional": false,
+      "statement": "'aircraft' and 'information' have no separate plural form ('two aircraft').",
+      "prompt_fragment": "Never write 'aircrafts' or 'informations'; the plural equals the singular.",
+      "check": { "kind": "forbidden_pattern", "pattern": "\\b(aircrafts|informations)\\b", "suggestion": "aircraft / information", "message": "These words have no plural -s.", "automatable": "full" } },
+
+    { "id": "SEM-A5-03", "source": "APM 1.3.5.2", "category": "grammar", "type": "deterministic", "target": "text", "severity": "warning", "conditional": false,
+      "statement": "Plural takes no apostrophe; apostrophe only for genitive (wrong: 'AMC's', 'CS's').",
+      "prompt_fragment": "Do not use an apostrophe to form plurals of abbreviations ('AMCs', not 'AMC's').",
+      "check": { "kind": "forbidden_pattern", "pattern": "\\b[A-Z]{2,}(?:'|\\u2019)s\\b", "suggestion": "drop the apostrophe for plural", "message": "Possible apostrophe-plural of an abbreviation.", "automatable": "partial", "notes": "Genitive use is valid; review flags." } },
+
+    { "id": "SEM-A5-04", "source": "APM 1.3.5.2", "category": "grammar", "type": "judgment", "target": "text", "severity": "info", "conditional": false,
+      "statement": "Observe 'it's' (it is) vs 'its' (possessive). (Combined with no-contractions, 'it's' should not appear at all.)",
+      "prompt_fragment": "Use 'its' for possessive; never 'it's' (also barred by the no-contractions rule)." },
+
+    { "id": "SEM-A5-05", "source": "APM 1.3.5.2", "category": "grammar", "type": "deterministic", "target": "text", "severity": "info", "conditional": false,
+      "statement": "'participate' is followed by 'in'.",
+      "prompt_fragment": "Follow 'participate' with 'in' ('participated in a meeting')." },
+
+    { "id": "SEM-A5-06", "source": "APM 1.3.5.2", "category": "grammar", "type": "deterministic", "target": "text", "severity": "warning", "conditional": true,
+      "statement": "'following' introducing a list is preceded by 'the' ('the following regulations apply:'). Exception: temporal use ('Following a meeting, ...').",
+      "prompt_fragment": "When 'following' introduces a list, precede it with 'the' ('the following ... apply:'); not for temporal use.",
+      "check": { "kind": "forbidden_pattern", "pattern": "(?<!the )(?<!The )\\bfollowing\\b(?=[^.]*:)", "suggestion": "the following ...", "message": "List-introducing 'following' should be preceded by 'the'.", "automatable": "partial" } },
+
+    { "id": "SEM-A5-07", "source": "APM 1.3.5.2", "category": "grammar", "type": "judgment", "target": "text", "severity": "info", "conditional": false,
+      "statement": "Use 'i.e.' (restates/clarifies) vs 'e.g.' (gives examples) correctly.",
+      "prompt_fragment": "Use 'i.e.' to restate/clarify and 'e.g.' to give examples; do not swap them." },
+
+    { "id": "SEM-A5-08", "source": "APM 1.3.2", "category": "grammar", "type": "judgment", "target": "both", "severity": "info", "conditional": false,
+      "statement": "Non-English words are written in italics (e.g. Zivilgesetzbuch (ZGB)).",
+      "prompt_fragment": "Italicise any non-English words." },
+
+    { "id": "SEM-A6", "source": "APM 1.3.6.3", "category": "terminology", "type": "deterministic", "target": "text", "severity": "error", "conditional": false,
+      "statement": "Uniform spelling of specific terms: use the correct form, flag the forbidden form(s).",
+      "prompt_fragment": "Use these exact forms: according to; callout; checklist; email; Flightops; helvetic (brand); Helvetic Airways AG; nominated person; Operations Manuals; Operations Management; Operations Control Center; helvetic Part-145; Piquet Officer (PQO); registration; SharePoint; straightforward.",
+      "check": { "kind": "term_map", "terms": [
+        { "correct": "according to", "forbidden": ["according"], "case_sensitive": false, "automatable": "partial", "notes": "Flag only 'according' not followed by 'to'." },
+        { "correct": "callout", "forbidden": ["call-out", "call out"], "case_sensitive": false, "automatable": "full", "notes": "Noun only." },
+        { "correct": "checklist", "forbidden": ["check list", "check-list"], "case_sensitive": false, "automatable": "full", "notes": "Noun only." },
+        { "correct": "email", "forbidden": ["mail"], "case_sensitive": false, "automatable": "partial", "notes": "Exception: postal mail." },
+        { "correct": "Flightops", "forbidden": ["flight ops", "flightops", "Flight Ops"], "case_sensitive": true, "automatable": "full" },
+        { "correct": "helvetic", "forbidden": ["Helvetic"], "case_sensitive": true, "automatable": "partial", "notes": "Brand alone; 'Helvetic' valid only in 'Helvetic Airways AG'." },
+        { "correct": "Helvetic Airways AG", "forbidden": ["helvetic Airways"], "case_sensitive": true, "automatable": "full" },
+        { "correct": "nominated person", "forbidden": ["nominated Person"], "case_sensitive": true, "automatable": "full" },
+        { "correct": "Operations Manuals", "forbidden": ["Operation Manual", "operation manual"], "case_sensitive": false, "automatable": "full" },
+        { "correct": "Operations Management", "forbidden": ["operations management"], "case_sensitive": true, "automatable": "full" },
+        { "correct": "Operations Control Center", "forbidden": ["Operations Control Centre"], "case_sensitive": false, "automatable": "full", "notes": "US spelling 'Center' is house form." },
+        { "correct": "Part-145", "forbidden": ["part 145", "Part M", "Part-M"], "case_sensitive": false, "automatable": "full" },
+        { "correct": "Piquet Officer (PQO)", "forbidden": ["Pikett Officer", "Picket Officer"], "case_sensitive": false, "automatable": "full" },
+        { "correct": "registration", "forbidden": ["immatriculation"], "case_sensitive": false, "automatable": "full" },
+        { "correct": "SharePoint", "forbidden": ["Sharepoint", "sharepoint", "Mdrive", "M server"], "case_sensitive": true, "automatable": "full" },
+        { "correct": "straightforward", "forbidden": ["straight forward"], "case_sensitive": false, "automatable": "full" }
+      ] } },
+
+    { "id": "SEM-A7-01", "source": "APM 1.3.7", "category": "units", "type": "deterministic", "target": "text", "severity": "warning", "conditional": false,
+      "statement": "Space between numerical value and SI unit ('250 g', '250 kts', '10000 ft', '3 h', '15 s').",
+      "prompt_fragment": "Put a space between a number and its SI unit ('250 kts', '10000 ft').",
+      "check": { "kind": "unit_spacing", "rule": "require space between number and SI unit symbol", "exceptions": ["percent (30%)", "typographic (12pt, 10px)", "angles/degrees (30, 45, 22')", "currency symbol ($10, EUR-symbol 14)", "time of day (3PM)"] } },
+
+    { "id": "SEM-A7-02", "source": "APM 1.3.7", "category": "units", "type": "deterministic", "target": "text", "severity": "info", "conditional": false,
+      "statement": "No space for: percentages (30%), typographic units (12pt, 10px), angles/degrees (30deg, 45deg, 22').",
+      "prompt_fragment": "No space before %, pt, px, or degree/angle symbols." },
+
+    { "id": "SEM-A7-03", "source": "APM 1.3.7", "category": "units", "type": "deterministic", "target": "text", "severity": "info", "conditional": false,
+      "statement": "Temperature: '30 C' (with space) technically correct, '30C' tolerated.",
+      "prompt_fragment": "For temperatures, a space before the degree-C is preferred but the no-space form is tolerated." },
+
+    { "id": "SEM-A7-04", "source": "APM 1.3.7", "category": "units", "type": "deterministic", "target": "text", "severity": "info", "conditional": false,
+      "statement": "Currency: symbol no space ($10); unit with space (10 USD).",
+      "prompt_fragment": "Currency symbol takes no space ('$10'); currency unit takes a space ('10 USD')." },
+
+    { "id": "SEM-A7-05", "source": "APM 1.3.7", "category": "units", "type": "deterministic", "target": "text", "severity": "info", "conditional": false,
+      "statement": "Time of day: no space ('3PM', '6PM').",
+      "prompt_fragment": "Write time of day with no space ('3PM')." },
+
+    { "id": "SEM-A7-06", "source": "APM 1.3.7", "category": "units", "type": "judgment", "target": "text", "severity": "info", "conditional": true,
+      "statement": "Spaces may be dropped for conciseness (checklists/procedures) or for chapter consistency.",
+      "prompt_fragment": "In checklists/procedures, the number-unit space may be dropped for conciseness or to keep a chapter consistent." },
+
+    { "id": "SEM-A8-01", "source": "APM 1.3.6.1", "category": "terminology", "type": "deterministic", "target": "text", "severity": "warning", "conditional": false,
+      "statement": "Crew terms: 'cabin crew' (whole) / 'cabin crew member' (single) / 'flight crew' (whole, flight deck) / 'flight crew member' (single).",
+      "prompt_fragment": "Use 'cabin crew'/'flight crew' for the whole crew and 'cabin crew member'/'flight crew member' for an individual." },
+
+    { "id": "SEM-A8-02", "source": "APM 1.3.6.2", "category": "terminology", "type": "judgment", "target": "text", "severity": "warning", "conditional": true,
+      "statement": "Refer to software/hardware tools by purpose, not brand. Brand allowed only in technical/tool-specific sections, and only if known or introduced. Tool-name list in OM-0 11.",
+      "prompt_fragment": "Refer to software/hardware tools by their purpose, not their brand name, unless the section is specifically technical about that tool." },
+
+    { "id": "SEM-A9-01", "source": "APM 1.3.6.4", "category": "grammar", "type": "judgment", "target": "text", "severity": "warning", "conditional": false,
+      "statement": "Qualification requirements use the sequence Facts -> Training and Experience -> Skills -> Knowledge (may combine if few). Language is listed under Skills, first in the Skills list.",
+      "prompt_fragment": "Order qualification requirements as Facts, Training and Experience, Skills, Knowledge; list language under Skills (first)." },
+
+    { "id": "SEM-A10-01", "source": "APM 1.5", "category": "references", "type": "judgment", "target": "text", "severity": "info", "conditional": false,
+      "statement": "Prefer a reference over copying source content.",
+      "prompt_fragment": "Reference the source section instead of copying its content." },
+
+    { "id": "SEM-A10-02", "source": "APM 1.5", "category": "references", "type": "deterministic", "target": "text", "severity": "warning", "conditional": false,
+      "statement": "A reference must include the section title, not just the number ('refer to OM-D 2.7.1.3 Training Effectiveness').",
+      "prompt_fragment": "Every reference must include the section title as well as its number." },
+
+    { "id": "SEM-A10-03", "source": "APM 1.5", "category": "references", "type": "judgment", "target": "text", "severity": "info", "conditional": false,
+      "statement": "No chains of references; point directly to the source text.",
+      "prompt_fragment": "Point references directly at the source text, never at another reference." },
+
+    { "id": "SEM-A10-04", "source": "APM 1.5", "category": "references", "type": "judgment", "target": "text", "severity": "info", "conditional": true,
+      "statement": "The addressed reader must legally have access to any referenced document.",
+      "prompt_fragment": "Only reference documents the intended reader is entitled to access by their role." },
+
+    { "id": "STY-B1-01", "source": "APM 1.4.1", "category": "bullets", "type": "judgment", "target": "both", "severity": "warning", "conditional": false,
+      "statement": "Intro sentence + each bullet must read as one grammatically correct sentence.",
+      "prompt_fragment": "Make the lead-in line and every bullet combine into a grammatically correct sentence." },
+
+    { "id": "STY-B1-02", "source": "APM 1.4.2", "category": "bullets", "type": "deterministic", "target": "html", "severity": "warning", "conditional": true,
+      "statement": "One empty line between main bullets; may be omitted to fit a page.",
+      "prompt_fragment": "Separate main bullets with one empty line.",
+      "check": { "kind": "html_structure", "description": "main-level list items separated by spacing", "automatable": "partial" } },
+
+    { "id": "STY-B1-03", "source": "APM 1.4.2", "category": "bullets", "type": "deterministic", "target": "html", "severity": "info", "conditional": true,
+      "statement": "No empty line between sub-bullets (unless they contain long text).",
+      "prompt_fragment": "Do not add empty lines between sub-bullets unless they hold long text.",
+      "check": { "kind": "html_structure", "description": "sub-level list items not spaced", "automatable": "partial" } },
+
+    { "id": "STY-B1-04", "source": "APM 1.4.2", "category": "bullets", "type": "deterministic", "target": "html", "severity": "info", "conditional": false,
+      "statement": "No extra space before a list; at least two breaks after a list.",
+      "prompt_fragment": "Add no extra space before a bullet list; follow it with at least two line breaks.",
+      "check": { "kind": "html_structure", "description": "spacing before/after list block", "automatable": "partial" } },
+
+    { "id": "STY-B1-05", "source": "APM 1.4.3", "category": "bullets", "type": "deterministic", "target": "text", "severity": "warning", "conditional": false,
+      "statement": "Each bullet starts lowercase, except terms normally capitalised ('Safety Manager (SM)', 'Finland').",
+      "prompt_fragment": "Start each bullet with a lowercase letter unless it begins with a normally-capitalised term." },
+
+    { "id": "STY-B1-06", "source": "APM 1.4.3", "category": "bullets", "type": "deterministic", "target": "text", "severity": "warning", "conditional": true,
+      "statement": "No full stop on short/partial-sentence bullets; full stop only when a bullet holds longer text with multiple sentences.",
+      "prompt_fragment": "Do not end short bullets with a full stop; use one only for bullets containing multiple sentences." },
+
+    { "id": "STY-B2-01", "source": "APM 3.2.3.3", "category": "line_breaks", "type": "deterministic", "target": "html", "severity": "info", "conditional": false,
+      "statement": "Soft break (Shift+Enter) for styling within a continuous paragraph.",
+      "prompt_fragment": "Use a soft break for line styling inside one continuous paragraph." },
+
+    { "id": "STY-B2-02", "source": "APM 3.2.3.3", "category": "line_breaks", "type": "deterministic", "target": "html", "severity": "info", "conditional": false,
+      "statement": "One hard break to separate paragraphs on a similar topic.",
+      "prompt_fragment": "Separate same-topic paragraphs with one hard break." },
+
+    { "id": "STY-B2-03", "source": "APM 3.2.3.3", "category": "line_breaks", "type": "deterministic", "target": "html", "severity": "info", "conditional": false,
+      "statement": "Two hard breaks to separate paragraphs on different topics (when no subheading is used).",
+      "prompt_fragment": "Separate different-topic paragraphs with two hard breaks when no subheading is used." },
+
+    { "id": "STY-B3-01", "source": "APM 3.2.4.1", "category": "headings", "type": "deterministic", "target": "html", "severity": "warning", "conditional": false,
+      "statement": "Use auto-numbered headings (Heading 2-8); numbering mandatory. Heading 1 reserved for chapter dividers; Heading 2 is the highest manual level.",
+      "prompt_fragment": "Use numbered Heading 2-8 for subtitles; do not assign Heading 1 (reserved for chapter dividers).",
+      "check": { "kind": "html_structure", "description": "headings use h2-h8; no manual h1", "automatable": "full" } },
+
+    { "id": "STY-B3-02", "source": "APM 3.2.4.1.1", "category": "headings", "type": "judgment", "target": "html", "severity": "info", "conditional": true,
+      "statement": "Heading-2 subchapters normally start on a new page; if short ones share a page, add a line break before each.",
+      "prompt_fragment": "Start Heading-2 subchapters on a new page; if grouping short ones, add a line break before each." },
+
+    { "id": "STY-B3-03", "source": "APM 3.2.4.1.2", "category": "headings", "type": "judgment", "target": "html", "severity": "info", "conditional": false,
+      "statement": "Heading 3-8 need no extra break before them (may add for readability).",
+      "prompt_fragment": "No extra break is needed before Heading 3-8." },
+
+    { "id": "STY-B3-04", "source": "APM 3.2.4.2", "category": "headings", "type": "deterministic", "target": "html", "severity": "info", "conditional": false,
+      "statement": "Unnumbered subtitles: main subtitle bold, subordinate subtitle italic (sparingly). Two hard breaks before, one hard break after.",
+      "prompt_fragment": "For unnumbered subtitles use bold (main) / italic (subordinate); two hard breaks before, one after." },
+
+    { "id": "STY-B4-01", "source": "APM 3.2.5.1", "category": "tables", "type": "deterministic", "target": "html", "severity": "info", "conditional": false,
+      "statement": "Table width 500px standard; 100% (=720px) for more content; rotate 90deg for very wide tables.",
+      "prompt_fragment": "Use 500px table width by default, 100% for content-heavy tables.",
+      "check": { "kind": "style_constant", "property": "table-width", "value": "500px | 100%" } },
+
+    { "id": "STY-B4-02", "source": "APM 3.2.5.1", "category": "tables", "type": "judgment", "target": "html", "severity": "info", "conditional": true,
+      "statement": "Simple/frequently changed -> build natively; complex/rarely changed -> embed as image.",
+      "prompt_fragment": "Build simple, frequently changed tables natively; embed complex, rarely changed tables as images." },
+
+    { "id": "STY-B4-03", "source": "APM 3.2.5.2", "category": "tables", "type": "deterministic", "target": "html", "severity": "info", "conditional": false,
+      "statement": "Vertical alignment top for multi-line cells; horizontal left by default.",
+      "prompt_fragment": "Align multi-line cell content to top; left-align horizontally by default.",
+      "check": { "kind": "style_constant", "property": "cell-valign", "value": "top" } },
+
+    { "id": "STY-B4-04", "source": "APM 3.2.5.3", "category": "tables", "type": "deterministic", "target": "html", "severity": "warning", "conditional": false,
+      "statement": "First row marked as header (first column in exceptional cases).",
+      "prompt_fragment": "Mark the first row as the table header.",
+      "check": { "kind": "html_structure", "description": "table has a header row (th)", "automatable": "full" } },
+
+    { "id": "STY-B4-05", "source": "APM 3.2.5.3", "category": "tables", "type": "deterministic", "target": "html", "severity": "info", "conditional": true,
+      "statement": "Optional emphasis colours: main title row #bbbbbb bold; subtitle row #dddddd normal; content #ffffff normal.",
+      "prompt_fragment": "If colouring table rows: main title #bbbbbb bold, subtitle #dddddd normal, content #ffffff.",
+      "check": { "kind": "style_constant", "property": "table-row-colours", "value": "#bbbbbb / #dddddd / #ffffff" } },
+
+    { "id": "STY-B4-06", "source": "APM 3.2.5.1", "category": "tables", "type": "judgment", "target": "html", "severity": "info", "conditional": false,
+      "statement": "Keep tables of similar layout on the same page.",
+      "prompt_fragment": "Group tables of similar layout on the same page." },
+
+    { "id": "STY-B5-01", "source": "APM 3.2.7", "category": "notes", "type": "deterministic", "target": "html", "severity": "warning", "conditional": false,
+      "statement": "Colours: Note emerald #2ecc71; Caution orange #f39c12; Warning pale red #e74c3c.",
+      "prompt_fragment": "Colour Notes #2ecc71, Cautions #f39c12, Warnings #e74c3c.",
+      "check": { "kind": "style_constant", "property": "note-colours", "value": "note=#2ecc71 caution=#f39c12 warning=#e74c3c" } },
+
+    { "id": "STY-B5-02", "source": "APM 3.2.7", "category": "notes", "type": "deterministic", "target": "html", "severity": "info", "conditional": false,
+      "statement": "Unnumbered note: table 100%, first column 60px, border 0px.",
+      "prompt_fragment": "Unnumbered note layout: table 100%, first column 60px, border 0.",
+      "check": { "kind": "style_constant", "property": "unnumbered-note-layout", "value": "width=100% col1=60px border=0" } },
+
+    { "id": "STY-B5-03", "source": "APM 3.2.7", "category": "notes", "type": "deterministic", "target": "html", "severity": "info", "conditional": false,
+      "statement": "Numbered note: table 100%, first column 110px, border 0px; in-text reference green, superscript, 14pt, in brackets.",
+      "prompt_fragment": "Numbered note layout: table 100%, first column 110px, border 0; reference green superscript 14pt in brackets.",
+      "check": { "kind": "style_constant", "property": "numbered-note-layout", "value": "width=100% col1=110px border=0" } },
+
+    { "id": "STY-B5-04", "source": "APM 3.2.7", "category": "notes", "type": "deterministic", "target": "html", "severity": "info", "conditional": false,
+      "statement": "Caution/Warning: table 100%, first column 110px, border 0px.",
+      "prompt_fragment": "Caution/Warning layout: table 100%, first column 110px, border 0.",
+      "check": { "kind": "style_constant", "property": "caution-warning-layout", "value": "width=100% col1=110px border=0" } },
+
+    { "id": "STY-B5-05", "source": "APM 3.2.7", "category": "notes", "type": "deterministic", "target": "text", "severity": "info", "conditional": false,
+      "statement": "First sentence of any Note/Caution/Warning starts with a capital letter.",
+      "prompt_fragment": "Start the first sentence of every Note/Caution/Warning with a capital letter." },
+
+    { "id": "STY-B6-01", "source": "APM 1.6.1", "category": "colours", "type": "deterministic", "target": "html", "severity": "warning", "conditional": false,
+      "statement": "Urgency messages: Warning #e74c3c, Caution #f39c12, Advisory #3498db, Note #2ecc71.",
+      "prompt_fragment": "Urgency colours: Warning #e74c3c, Caution #f39c12, Advisory #3498db, Note #2ecc71.",
+      "check": { "kind": "style_constant", "property": "urgency-colours", "value": "warning=#e74c3c caution=#f39c12 advisory=#3498db note=#2ecc71" } },
+
+    { "id": "STY-B6-02", "source": "APM 1.6.2", "category": "colours", "type": "deterministic", "target": "html", "severity": "info", "conditional": false,
+      "statement": "Embraer fleet variant colours (use uniformly): E1 #019A82, E190-E1 #02cda5 (bg #dcf2ee), E195-E1 #00665e (bg #94b3b0), E2 #002CAD, E190-E2 #0057d9 (bg #ccdce8), E195-E2 #000080 (bg #bec6d1).",
+      "prompt_fragment": "Use the assigned Embraer variant colours uniformly (E190-E1 #02cda5, E195-E1 #00665e, E190-E2 #0057d9, E195-E2 #000080, etc.).",
+      "check": { "kind": "style_constant", "property": "fleet-colours", "value": "E1=#019A82 E190-E1=#02cda5 E195-E1=#00665e E2=#002CAD E190-E2=#0057d9 E195-E2=#000080" } },
+
+    { "id": "STY-B6-03", "source": "APM 1.6.3", "category": "colours", "type": "deterministic", "target": "html", "severity": "info", "conditional": true,
+      "statement": "Good/bad table cell shading (use conservatively): good #f5fcf5, bad #f7e9e9.",
+      "prompt_fragment": "For good/bad table cells use good=#f5fcf5, bad=#f7e9e9, sparingly.",
+      "check": { "kind": "style_constant", "property": "good-bad-colours", "value": "good=#f5fcf5 bad=#f7e9e9" } },
+
+    { "id": "STY-B6-04", "source": "APM 2.3.3.2", "category": "colours", "type": "deterministic", "target": "html", "severity": "info", "conditional": false,
+      "statement": "Grey titles: #848687, 24px.",
+      "prompt_fragment": "Grey titles use #848687 at 24px.",
+      "check": { "kind": "style_constant", "property": "grey-title", "value": "color=#848687 size=24px" } },
+
+    { "id": "STY-B7-01", "source": "APM 3.2.6", "category": "cross_references", "type": "judgment", "target": "html", "severity": "info", "conditional": false,
+      "statement": "References as active (clickable) links, internal and external.",
+      "prompt_fragment": "Render references as active links, internal and external." },
+
+    { "id": "STY-B7-02", "source": "APM 3.2.6", "category": "cross_references", "type": "deterministic", "target": "html", "severity": "info", "conditional": false,
+      "statement": "Mark links as 'Controlled Link' for tracking.",
+      "prompt_fragment": "Set every reference link as a 'Controlled Link'." },
+
+    { "id": "STY-B7-03", "source": "APM 3.2.6.1", "category": "cross_references", "type": "judgment", "target": "html", "severity": "info", "conditional": false,
+      "statement": "Link to headings, not pages.",
+      "prompt_fragment": "Link to headings rather than pages." },
+
+    { "id": "STY-B7-04", "source": "APM 3.2.6.2", "category": "cross_references", "type": "deterministic", "target": "text", "severity": "info", "conditional": false,
+      "statement": "Internal reference: section only ('3.2.6.3 - Marking / Colouring').",
+      "prompt_fragment": "Write internal references as section only (e.g. '3.2.6.3 - Title')." },
+
+    { "id": "STY-B7-05", "source": "APM 3.2.6.3", "category": "cross_references", "type": "deterministic", "target": "text", "severity": "warning", "conditional": false,
+      "statement": "External reference: prefix with the manual name ('OM-A 8.3.8.5 Wind Shear').",
+      "prompt_fragment": "Prefix external references with the manual name (e.g. 'OM-A 8.3.8.5 Wind Shear')." },
+
+    { "id": "STY-B8-01", "source": "APM 3.2.3.2", "category": "emphasis", "type": "judgment", "target": "both", "severity": "warning", "conditional": false,
+      "statement": "Bold/underline very conservatively, a few words at most, only for crucial items or to prevent error.",
+      "prompt_fragment": "Use bold/underline only for a few crucial words, never for whole sentences." },
+
+    { "id": "STY-B8-02", "source": "APM 3.2.3.2", "category": "emphasis", "type": "deterministic", "target": "html", "severity": "info", "conditional": false,
+      "statement": "No manual font/size changes; use the standard WebManuals font/size.",
+      "prompt_fragment": "Do not change font or size; use the standard body style." },
+
+    { "id": "STY-B8-03", "source": "APM 3.2.3.1", "category": "emphasis", "type": "deterministic", "target": "html", "severity": "info", "conditional": false,
+      "statement": "Clear imported formatting (Remove Format) when pasting from external sources.",
+      "prompt_fragment": "Strip imported formatting so output carries no foreign fonts/colours/sizes." },
+
+    { "id": "PRC-01", "source": "APM 3.2.2", "category": "process", "type": "judgment", "target": "html", "severity": "info", "conditional": true,
+      "statement": "Changelog comments: 2-3 per change (content; reference/reason; MoC for prior approval). 'Important' flag only for prior-approval or reader-attention content comments.",
+      "prompt_fragment": "(Process) Each change needs a content comment, a reference/reason comment, and an MoC comment if prior approval applies." },
+
+    { "id": "PRC-02", "source": "APM 3.2.8", "category": "process", "type": "judgment", "target": "html", "severity": "info", "conditional": true,
+      "statement": "Content mirroring: mirror from the NEXT revision of the source; use the offset function for heading levels.",
+      "prompt_fragment": "(Process) Mirror content from the next revision of the source, adjusting heading levels via offset." },
+
+    { "id": "PRC-03", "source": "APM 3.2.9", "category": "process", "type": "judgment", "target": "html", "severity": "info", "conditional": false,
+      "statement": "Abbreviations are auto-detected, created/used via pop-up, marked yellow, and auto-listed in the LoA.",
+      "prompt_fragment": "(Process) Confirm abbreviations via the WebManuals pop-up so they appear in the List of Abbreviations." }
+
+  ]
+}

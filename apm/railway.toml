@@ -1,0 +1,6 @@
+[deploy]
+# Increase timeout to 10 minutes to handle large PDF ingestion
+# (chunking + embedding 500+ pages can take several minutes)
+healthcheckTimeout = 600
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 3
