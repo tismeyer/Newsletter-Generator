@@ -153,6 +153,18 @@ The editor always sees the original notes beside the draft so they can
 verify nothing was invented. The AI is instructed to insert `[TO CONFIRM]`
 for anything not present in the notes.
 
+### Content: notes only, or notes plus general knowledge
+
+`sources` on `/generate` chooses what Rosie may use:
+
+- `notes` (default): the notes alone. Nothing is invented; gaps become `[TO CONFIRM]`.
+- `general`: for explanatory or descriptive chapters. Rosie may add
+  well-established general aviation background from Claude's own knowledge
+  (no live web search). She still adds no procedures, limits or
+  helvetic-specific facts, and the notes win where they differ. She lists each
+  added fact in a trailing `<!-- ADDED: … -->` comment; the server strips it from
+  the draft and returns the facts as `added`, which the page shows for checking.
+
 ---
 
 ## Updating the ruleset

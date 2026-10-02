@@ -115,6 +115,10 @@ function LengthSlider({ value, onChange, fit, onFit }) {
   );
 }
 
+const SOURCES = [
+  { v: "notes", label: "Notes only" },
+  { v: "general", label: "Notes + general knowledge" },
+];
 const TARGET = [
   { v: "html", label: "HTML for WebManuals" },
   { v: "text", label: "Plain text" },
@@ -215,6 +219,7 @@ function Writer({ notify }) {
     target_chars: 1500,
     fit_pages: true,
     target: "html",
+    sources: "notes",
   });
   const [busy, setBusy] = useState(false);
   const [res, setRes] = useState(null); // {draft, violations, iterations, target}
@@ -226,7 +231,7 @@ function Writer({ notify }) {
     setBusy(true);
     try {
       const r = await postJSON("/generate", { notes: notes.trim(), ...opts });
-      setRes({ ...r, target: opts.target });
+      setRes({ ...r, target: opts.target, sources: opts.sources });
     } catch (e) {
       notify(e.message);
     } finally {
@@ -300,9 +305,21 @@ function Writer({ notify }) {
             aria-label="Your notes"
             placeholder={
               "Rough notes: bullet points, fragments, references to other sections.\n\n" +
-              "Rosie never invents facts. Anything missing is marked [TO CONFIRM] for you to fill in."
+              (opts.sources === "general"
+                ? "Rosie may add general aviation background to your notes, never procedures. Everything she adds is listed for you to check."
+                : "Rosie never invents facts. Anything missing is marked [TO CONFIRM] for you to fill in.")
             }
           />
+        </fieldset>
+
+        <fieldset>
+          <legend>Content</legend>
+          <Segmented options={SOURCES} value={opts.sources} onChange={set("sources")} label="What may Rosie use?" />
+          <p className="hint apm-srchint">
+            {opts.sources === "general"
+              ? "For explanatory or descriptive chapters only. Rosie adds well-established background (how and why things work), never procedures, limits or helvetic-specific facts. What she adds is listed below the draft for you to check."
+              : "Rosie writes from your notes alone and invents nothing. Use this for procedures and anything helvetic-specific."}
+          </p>
         </fieldset>
 
         <fieldset>
@@ -404,6 +421,24 @@ function Writer({ notify }) {
                 />
               </div>
             ))}
+
+            {res.sources === "general" && (
+              <div className="apm-card apm-added">
+                <div className="apm-cardhead">
+                  <b>Added from general knowledge</b>
+                  <span className="apm-badge warning">please check</span>
+                </div>
+                {res.added && res.added.length ? (
+                  <ul>
+                    {res.added.map((a, i) => (
+                      <li key={i}>{a}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="apm-clear">Rosie reports that she added nothing beyond your notes.</p>
+                )}
+              </div>
+            )}
 
             <div className="apm-card">
               <div className="apm-cardhead">

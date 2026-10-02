@@ -45,6 +45,33 @@ PREAMBLE = (
     "House style rules:"
 )
 
+# With "notes and general knowledge" the no-invention rule is relaxed for
+# background only. Everything added is listed for the editor to check.
+PREAMBLE_GENERAL = (
+    "You are a documentation assistant for helvetic (Helvetic Airways AG). "
+    "Expand the editor's rough notes into finished manual content that strictly "
+    "follows the house style rules below. The editor has allowed general "
+    "knowledge for this text: you may add explanatory and descriptive background "
+    "that is well established and generally true in aviation (for example how a "
+    "physical effect works, what a concept means, why a hazard matters). "
+    "You must NOT add anything specific to helvetic or to a procedure: no company "
+    "procedures, duties, limits, figures, approvals, frequencies, times or "
+    "responsibilities beyond the notes; if one is needed and missing, write "
+    "[TO CONFIRM]. Do not quote regulation article numbers, numeric values or "
+    "airport data unless they are in the notes or you are certain of them; "
+    "otherwise write [TO CONFIRM]. The notes always take precedence over general "
+    "knowledge. You own wording and presentation; the editor owns factual "
+    "correctness.\n\n"
+    "House style rules:"
+)
+
+ADDED_INSTRUCTION = (
+    "\n\nAfter the content, list every statement of fact you added that is not in "
+    "the editor's notes, in one HTML comment on its own last line, items separated "
+    "by ' | ', each item short: <!-- ADDED: first added fact | second added fact -->. "
+    "If you added nothing, write <!-- ADDED: none -->."
+)
+
 # ---------------------------------------------------------------------------
 # Style modifier sets — injected between the preamble and the rule list.
 # Each dimension is independent; all four are always applied together.
@@ -305,14 +332,16 @@ def build_system_prompt(rules: list, include_process: bool = False,
                         target: str = "html",
                         structure: str = None, tone: str = None,
                         audience: str = None, length: str = None,
-                        target_chars: int = None, fit_pages: bool = False) -> str:
+                        target_chars: int = None, fit_pages: bool = False,
+                        sources: str = "notes") -> str:
     groups: dict = {}
     for r in rules:
         if r["category"] == "process" and not include_process:
             continue
         groups.setdefault(r["category"], []).append(r)
 
-    lines = [PREAMBLE]
+    general = sources == "general"
+    lines = [PREAMBLE_GENERAL if general else PREAMBLE]
 
     # Style modifiers come first so they frame how the rules are applied
     style_block = build_style_block(structure, tone, audience, length,
@@ -328,6 +357,8 @@ def build_system_prompt(rules: list, include_process: bool = False,
             lines.append(f"- {r['prompt_fragment']}")
 
     lines.append(OUTPUT_INSTRUCTIONS.get(target, OUTPUT_INSTRUCTIONS["html"]))
+    if general:
+        lines.append(ADDED_INSTRUCTION)
     return "\n".join(lines)
 
 

@@ -503,3 +503,6 @@ textarea.inline-field.grow{display:block;resize:none;overflow:hidden;min-height:
 .apm-fill.near .apm-fillbar i{background:#E0A800}
 .apm-fill.over .apm-fillbar i{background:#E4032E}
 .apm-pagenote{width:100%;max-width:794px;font-size:13px;padding:8px 12px;border-left:3px solid var(--navy);background:var(--panel);border-radius:2px}
+.apm-srchint{margin:8px 0 0;line-height:1.45}
+.apm-added{border-left:3px solid #F2C200;background:#FFFBE6}
+.apm-added ul{margin:6px 0 0;padding-left:20px;display:flex;flex-direction:column;gap:4px;font-size:13px}

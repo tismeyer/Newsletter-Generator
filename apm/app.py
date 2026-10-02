@@ -19,7 +19,8 @@ import math
 import os
 import logging
 from pathlib import Path
-from typing import List, Optional
+import re
+from typing import List, Literal, Optional
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -78,6 +79,7 @@ class GenerateRequest(BaseModel):
     length:    Optional[str] = None   # old page: concise / standard / comprehensive
     target_chars: Optional[int] = Field(None, ge=200, le=20000)  # length slider
     fit_pages: bool = False   # keep within whole WebManuals pages
+    sources: Literal["notes", "general"] = "notes"   # general: background knowledge allowed
 
 
 class GenerateResponse(BaseModel):
@@ -86,6 +88,20 @@ class GenerateResponse(BaseModel):
     iterations: int
     chars:      int = 0
     pages:      List[dict] = []   # where WebManuals pages end; see pages.py
+    added:      List[str] = []    # facts Rosie added from general knowledge
+
+
+_ADDED_RE = re.compile(r"<!--\s*ADDED:(.*?)-->", re.S | re.I)
+
+
+def _split_added(text: str):
+    """The draft without its ADDED comment, and the facts listed in it."""
+    found = _ADDED_RE.findall(text)
+    draft = _ADDED_RE.sub("", text).strip()
+    if not found:
+        return draft, None
+    items = [i.strip() for i in found[-1].split("|") if i.strip()]
+    return draft, [i for i in items if i.lower() not in ("none", "nothing")]
 
 
 def _call(system: str, messages: List[dict]) -> str:
@@ -110,11 +126,15 @@ def generate(req: GenerateRequest):
         length    = req.length,
         target_chars = req.target_chars,
         fit_pages = req.fit_pages,
+        sources   = req.sources,
     )
 
     # ── 2. Generate ───────────────────────────────────────────────────────
     messages   = [{"role": "user", "content": f"Editor's notes:\n{req.notes}"}]
+    added: List[str] = []
     draft      = _call(system, messages)
+    draft, a   = _split_added(draft)
+    added      = a if a is not None else added
     violations = run_checks(draft, RULES)
     iterations = 0
 
@@ -133,6 +153,8 @@ def generate(req: GenerateRequest):
             ),
         })
         draft      = _call(system, messages)
+        draft, a   = _split_added(draft)
+        added      = a if a is not None else added
         violations = run_checks(draft, RULES)
         iterations += 1
 
@@ -163,6 +185,8 @@ def generate(req: GenerateRequest):
                 ),
             })
             draft = _call(system, messages)
+            draft, a = _split_added(draft)
+            added = a if a is not None else added
             violations = run_checks(draft, RULES)
             pages = paginate(draft)
             tries += 1
@@ -174,4 +198,5 @@ def generate(req: GenerateRequest):
         iterations = iterations,
         chars      = visible_chars(draft),
         pages      = pages,
+        added      = added if req.sources == "general" else [],
     )
