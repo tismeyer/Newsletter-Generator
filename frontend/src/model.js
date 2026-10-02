@@ -204,6 +204,48 @@ export function textToBlocks(text) {
   return blocks;
 }
 
+/**
+ * A chapter's generated text split for in-place editing: runs of ordinary text
+ * and the highlight boxes between them. segmentsToText reverses it exactly, so
+ * the draft stays one string (what is saved, revised and sent).
+ */
+export function draftSegments(text) {
+  const segs = [];
+  let run = [];
+  const flush = () => {
+    if (run.length) segs.push({ kind: "text", text: run.join("\n") });
+    run = [];
+  };
+  for (const line of String(text || "").split("\n")) {
+    const m = line.match(MARKER_RE);
+    if (!m) {
+      run.push(line);
+      continue;
+    }
+    flush();
+    const body = line.replace(MARKER_RE, "").trim();
+    const cut = body.indexOf(":");
+    segs.push({
+      kind: m[1].toUpperCase() === "ACTION" ? "action_box" : "info_box",
+      title: cut >= 0 ? body.slice(0, cut).trim() : "",
+      text: cut >= 0 ? body.slice(cut + 1).trim() : body,
+    });
+  }
+  flush();
+  return segs;
+}
+
+export function segmentsToText(segs) {
+  return segs
+    .map((g) =>
+      g.kind === "text"
+        ? g.text
+        : // A box is one line in the draft, so line breaks typed in it become spaces.
+          `[${g.kind === "action_box" ? "ACTION" : "INFO"}] ${g.title.replace(/:/g, " -")}: ${g.text.replace(/\s*\n\s*/g, " ")}`
+    )
+    .join("\n");
+}
+
 /** Generated blocks back to the editable text form textToBlocks reads. */
 export function blocksToText(blocks) {
   const out = [];

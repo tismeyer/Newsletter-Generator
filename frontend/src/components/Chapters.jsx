@@ -1,29 +1,82 @@
-import { GrowText, Segmented } from "./Bits.jsx";
+import { GrowText } from "./Bits.jsx";
 import ReviseBar from "./DraftTools.jsx";
-import { MAX_CHAPTERS, TREATMENTS, TREATMENT_COPY, hasDraft, newChapter } from "../model.js";
+import {
+  MAX_CHAPTERS,
+  TREATMENTS,
+  TREATMENT_COPY,
+  draftSegments,
+  hasDraft,
+  newChapter,
+  segmentsToText,
+} from "../model.js";
 
-function BoxRow({ box, onChange, onRemove }) {
+/** A red or blue highlight box, edited where it sits on the page. */
+function BoxEditor({ box, onChange, onRemove }) {
   const red = box.type === "action_box";
   return (
-    <div className={"boxrow " + (red ? "red" : "blue")}>
-      <div className="top">
-        <strong>{red ? "Red box \u2014 action or deadline" : "Blue box \u2014 background or FYI"}</strong>
-        <button type="button" className="btn link" onClick={onRemove}>
-          Remove
+    <div className={"ed-box " + (red ? "red" : "blue")}>
+      <div className="ed-boxhead">
+        <input
+          type="text"
+          className="inline-field ed-boxtitle"
+          placeholder={red ? "Action required" : "Good to know"}
+          aria-label={red ? "Red box title" : "Blue box title"}
+          value={box.title}
+          onChange={(e) => onChange({ ...box, title: e.target.value })}
+        />
+        <button
+          type="button"
+          className="ed-x"
+          title="Remove this box"
+          aria-label="Remove this box"
+          onClick={onRemove}
+        >
+          &times;
         </button>
       </div>
-      <input
-        type="text"
-        placeholder="Box title"
-        value={box.title}
-        onChange={(e) => onChange({ ...box, title: e.target.value })}
-      />
-      <textarea
-        className="mt6 short"
-        placeholder="What goes in the box, or leave empty and let the writer draft it."
+      <GrowText
+        className="ed-boxbody"
         value={box.text}
-        onChange={(e) => onChange({ ...box, text: e.target.value })}
+        onChange={(v) => onChange({ ...box, text: v })}
+        placeholder={
+          red
+            ? "Something the reader must do, or leave empty and let the writer draft it."
+            : "Background or FYI, or leave empty and let the writer draft it."
+        }
+        ariaLabel={red ? "Red box text" : "Blue box text"}
       />
+    </div>
+  );
+}
+
+/**
+ * Generated chapter text, shown the way it prints: text runs, and the red and
+ * blue boxes as boxes. Every edit is written back into the one draft string.
+ */
+function DraftEditor({ draft, onChange, ariaLabel }) {
+  const segs = draftSegments(draft);
+  const put = (i, seg) => onChange(segmentsToText(segs.map((g, j) => (j === i ? seg : g))));
+  const drop = (i) => onChange(segmentsToText(segs.filter((_, j) => j !== i)));
+  return (
+    <div className="ed-drafted">
+      {segs.map((g, i) =>
+        g.kind === "text" ? (
+          <GrowText
+            key={i}
+            className="ed-body"
+            value={g.text}
+            onChange={(v) => put(i, { ...g, text: v })}
+            ariaLabel={ariaLabel}
+          />
+        ) : (
+          <BoxEditor
+            key={i}
+            box={{ type: g.kind, title: g.title, text: g.text }}
+            onChange={(b) => put(i, { kind: g.kind, title: b.title, text: b.text })}
+            onRemove={() => drop(i)}
+          />
+        )
+      )}
     </div>
   );
 }
@@ -32,120 +85,115 @@ function Chapter({ chapter, index, ctx, onChange, onRemove }) {
   const set = (k, v) => onChange({ ...chapter, [k]: v });
   const copy = TREATMENT_COPY[chapter.treatment];
   const locked = chapter.treatment === "verbatim";
+  const drafted = hasDraft(chapter);
+  const name = "Chapter " + (index + 1);
 
   const setTreatment = (v) =>
     onChange({ ...chapter, treatment: v, box_policy: v === "verbatim" ? "none" : chapter.box_policy });
 
-  const addBox = (type) =>
-    set("boxes", [...chapter.boxes, { type, title: "", text: "" }]);
+  const addBox = (type) => set("boxes", [...chapter.boxes, { type, title: "", text: "" }]);
 
   return (
-    <details className="chapter" open>
-      <summary>
-        <span className="num">{index + 1}</span>
-        <span className="ttl">{chapter.heading || "Untitled chapter"}</span>
-        {hasDraft(chapter) && <span className="tag ready">text ready</span>}
-        <span className="tag">
-          {chapter.boxes.length} box{chapter.boxes.length === 1 ? "" : "es"}
-        </span>
-      </summary>
-      <div className="inner">
-        <label className="f">
-          <span>Chapter title</span>
-          <input
-            type="text"
-            placeholder="e.g. Operations update"
-            value={chapter.heading}
-            onChange={(e) => set("heading", e.target.value)}
-          />
-        </label>
+    <section className="ed-chapter">
+      <input
+        type="text"
+        className="inline-field ed-h1"
+        placeholder={name + " title"}
+        aria-label={name + " title"}
+        value={chapter.heading}
+        onChange={(e) => set("heading", e.target.value)}
+      />
 
-        <label className="f mt10">
-          <span>{copy.label}</span>
-          <textarea
-            placeholder={copy.placeholder}
+      {drafted ? (
+        <DraftEditor
+          draft={chapter.draft}
+          onChange={(v) => set("draft", v)}
+          ariaLabel={name + " generated text"}
+        />
+      ) : (
+        <>
+          <GrowText
+            className="ed-body"
             value={chapter.text}
-            onChange={(e) => set("text", e.target.value)}
+            onChange={(v) => set("text", v)}
+            placeholder={copy.placeholder}
+            ariaLabel={name + " text"}
           />
-        </label>
-
-        <div className="mt8">
-          <Segmented
-            label="What should happen to this text?"
-            options={TREATMENTS}
-            value={chapter.treatment}
-            onChange={setTreatment}
-          />
-          <span className="hint">{copy.hint}</span>
-        </div>
-
-        <label className="f mt10">
-          <span>Highlight boxes here</span>
-          <select
-            disabled={locked}
-            value={chapter.box_policy}
-            onChange={(e) => set("box_policy", e.target.value)}
-          >
-            <option value="inherit">Use the document setting</option>
-            <option value="ai">AI may add boxes</option>
-            <option value="none">Never add boxes</option>
-          </select>
-        </label>
-
-        {hasDraft(chapter) && (
-          <div className="draftpanel">
-            <span className="draftlabel">Generated text</span>
-            <GrowText
-              className="draftbody"
-              value={chapter.draft}
-              onChange={(v) => set("draft", v)}
-              ariaLabel={"Chapter " + (index + 1) + " generated text"}
-            />
-            <span className="hint block">
-              Lines starting with [ACTION] become a red box and [INFO] a blue box, written as
-              &ldquo;[ACTION] Title: text&rdquo;.
-            </span>
-            <ReviseBar
-              kind="chapter"
-              item={chapter}
-              heading={chapter.heading}
-              {...ctx}
-              onText={(t) => set("draft", t)}
-              onDiscard={() => onChange({ ...chapter, draft: null, draftFrom: "" })}
-            />
-          </div>
-        )}
-
-        {/* Once text is generated its boxes live in it as [ACTION]/[INFO] lines,
-            so the box editors only return with "Back to my notes". */}
-        {!hasDraft(chapter) &&
-          chapter.boxes.map((b, i) => (
-            <BoxRow
+          {/* Once text is generated its boxes live in it as [ACTION]/[INFO] lines,
+              so the box editors only return with "Back to my notes". */}
+          {chapter.boxes.map((b, i) => (
+            <BoxEditor
               key={i}
               box={b}
               onChange={(nb) => set("boxes", chapter.boxes.map((x, j) => (j === i ? nb : x)))}
               onRemove={() => set("boxes", chapter.boxes.filter((_, j) => j !== i))}
             />
           ))}
+        </>
+      )}
 
-        <div className="inline mt10">
-          {!hasDraft(chapter) && (
-            <>
-              <button type="button" className="btn small" onClick={() => addBox("action_box")}>
-                Add red box
-              </button>
-              <button type="button" className="btn small" onClick={() => addBox("info_box")}>
-                Add blue box
-              </button>
-            </>
-          )}
-          <span className="spacer" />
-          <button type="button" className="btn link" onClick={onRemove}>
-            Remove chapter
-          </button>
-        </div>
+      <div className="ed-tools">
+        {drafted ? (
+          <details className="mynotes">
+            <summary>My notes</summary>
+            <GrowText
+              className="ed-notes"
+              value={chapter.text}
+              onChange={(v) => set("text", v)}
+              ariaLabel={name + " notes"}
+            />
+          </details>
+        ) : (
+          <>
+            <select
+              value={chapter.treatment}
+              aria-label="What should happen to this text?"
+              title={copy.hint}
+              onChange={(e) => setTreatment(e.target.value)}
+            >
+              {TREATMENTS.map((t) => (
+                <option key={t.v} value={t.v}>
+                  {t.label}
+                </option>
+              ))}
+            </select>
+            <select
+              disabled={locked}
+              value={chapter.box_policy}
+              aria-label="Highlight boxes in this chapter"
+              onChange={(e) => set("box_policy", e.target.value)}
+            >
+              <option value="inherit">Boxes: document setting</option>
+              <option value="ai">Boxes: AI may add</option>
+              <option value="none">Boxes: never add</option>
+            </select>
+            <button type="button" className="ed-add red" onClick={() => addBox("action_box")}>
+              + Red box
+            </button>
+            <button type="button" className="ed-add blue" onClick={() => addBox("info_box")}>
+              + Blue box
+            </button>
+          </>
+        )}
+        <span className="spacer" />
+        <button type="button" className="btn link" onClick={onRemove}>
+          Remove chapter
+        </button>
       </div>
-    </details>
+
+      {drafted && (
+        <>
+          <ReviseBar
+            kind="chapter"
+            item={chapter}
+            heading={chapter.heading}
+            {...ctx}
+            onText={(t) => set("draft", t)}
+            onDiscard={() => onChange({ ...chapter, draft: null, draftFrom: "" })}
+          />
+        </>
+      )}
+    </section>
   );
 }
 
@@ -157,27 +205,34 @@ export default function Chapters({ chapters, patch, notify, style, provider }) {
       <legend>
         Chapters <span className="soft">{chapters.length} of {MAX_CHAPTERS}</span>
       </legend>
-      {chapters.map((c, i) => (
-        <Chapter
-          key={c.id}
-          chapter={c}
-          index={i}
-          ctx={ctx}
-          onChange={(nc) => set(chapters.map((x, j) => (j === i ? nc : x)))}
-          onRemove={() => set(chapters.filter((_, j) => j !== i))}
-        />
-      ))}
-      <button
-        type="button"
-        className="btn small"
-        onClick={() =>
-          chapters.length >= MAX_CHAPTERS
-            ? notify(`Maximum of ${MAX_CHAPTERS} chapters.`)
-            : set([...chapters, newChapter("")])
-        }
-      >
-        Add chapter
-      </button>
+      <p className="hint mb10">
+        Type straight into the page: chapter title, then the text. Add red boxes for
+        actions or deadlines and blue boxes for background. Start a line with &ldquo;- &rdquo;
+        for a bullet.
+      </p>
+      <div className="ed-paper ed-chapters">
+        {chapters.map((c, i) => (
+          <Chapter
+            key={c.id}
+            chapter={c}
+            index={i}
+            ctx={ctx}
+            onChange={(nc) => set(chapters.map((x, j) => (j === i ? nc : x)))}
+            onRemove={() => set(chapters.filter((_, j) => j !== i))}
+          />
+        ))}
+        <button
+          type="button"
+          className="ed-addchapter"
+          onClick={() =>
+            chapters.length >= MAX_CHAPTERS
+              ? notify(`Maximum of ${MAX_CHAPTERS} chapters.`)
+              : set([...chapters, newChapter("")])
+          }
+        >
+          + Add chapter
+        </button>
+      </div>
     </fieldset>
   );
 }
