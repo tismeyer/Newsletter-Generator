@@ -4,7 +4,7 @@
 
 const PAGE_BODY_CM = 24.1;
 const TITLE_BLOCK_CM = 2.6;
-const CARD_ROW_OVERHEAD_CM = 0.85;
+const CARD_ROW_OVERHEAD_CM = 1.15;
 const NEWS_ROW_OVERHEAD_CM = 0.45;
 const LINE_CM = 0.37;
 

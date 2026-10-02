@@ -200,7 +200,11 @@ textarea.short{min-height:56px}
 .icontile img{width:24px;height:24px}
 .icontile span{font-size:10.5px;color:var(--muted);text-align:center;line-height:1.2}
 .icontile.on span{color:var(--ink);font-weight:700}
-.p-cardtitle img,.p-newslabel img{width:11px;height:11px;vertical-align:-1px;margin-right:5px}
+.p-cardhead{display:flex;align-items:center;gap:9px;margin-bottom:6px}
+.p-cardhead .p-cardsub{margin-bottom:0}
+.p-icon{width:28px;height:28px;flex:none}
+.p-newslabel{display:flex;align-items:center;gap:9px}
+.p-newslabel .p-icon{width:24px;height:24px}
 
 /* --- masthead edited in place --- */
 .mast{border:1px solid var(--line);border-radius:3px;background:#fff;padding:16px 18px 14px;color:#40494F}

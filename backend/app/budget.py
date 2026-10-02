@@ -15,7 +15,7 @@ from __future__ import annotations
 # --- measured from a rendered A4 page at the layout's 8 pt body size ---
 PAGE_BODY_CM = 24.1          # printable height between the margins
 TITLE_BLOCK_CM = 2.6         # title, headline, date and the rule beneath
-CARD_ROW_OVERHEAD_CM = 0.85  # card padding, border and the gap below the row
+CARD_ROW_OVERHEAD_CM = 1.15  # card padding, border, icon heading row and the gap below
 NEWS_ROW_OVERHEAD_CM = 0.45  # row padding and the hairline rule
 LINE_CM = 0.37               # one line of body text
 

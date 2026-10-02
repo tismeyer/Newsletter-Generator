@@ -16,6 +16,7 @@ from pathlib import Path
 
 from docx import Document
 from docx.enum.table import WD_ALIGN_VERTICAL
+from docx.oxml.ns import qn
 from docx.shared import Pt, RGBColor, Twips
 
 from ..budget import card_rows, is_full_width
@@ -39,30 +40,72 @@ MIN_ROW_ONE = 7200
 MIN_ROW_TWO = 3200
 
 
-def _icon_run(paragraph, icon: str, size_pt: int = 11):
-    from docx.shared import Pt as _Pt
+CARD_ICON_PT = 28
+NEWS_ICON_PT = 24
+ICON_GAP = 160            # twips between an icon and the text beside it
+CARD_PAD = 160            # card cell's left/right margin, see _fill_card
+
+
+def _icon_header(cell, icon: str, size_pt: int, width: int):
+    """Put a borderless two-column table at the top of `cell`: the round icon
+    on the left, and return the right-hand cell for the heading text.
+
+    A side-by-side table rather than an inline picture, so a two-line heading
+    sits beside the icon instead of wrapping underneath it.
+    """
+    icon_w = size_pt * 20 + ICON_GAP
+    table = cell.add_table(rows=1, cols=2)
+    # add_table appends after the cell's starting paragraph and adds an empty
+    # one after itself; drop both so the header is the first thing in the cell.
+    for p in cell.paragraphs:
+        p._p.getparent().remove(p._p)
+    X.table_no_borders(table)
+    table.autofit = False
+    X.fixed_columns(table, [icon_w, width - icon_w])
+    icon_cell, text_cell = table.rows[0].cells
+    for c in (icon_cell, text_cell):
+        X.cell_margins(c, top=0, bottom=0, left=0, right=0)
+        c.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
 
     path = ASSETS / f"ic_{icon}.png"
     if path.exists():
-        paragraph.add_run().add_picture(str(path), width=_Pt(size_pt), height=_Pt(size_pt))
-        paragraph.add_run("   ")
+        pic = icon_cell.paragraphs[0]
+        pic.paragraph_format.space_after = Pt(0)
+        pic.paragraph_format.space_before = Pt(0)
+        pic.add_run().add_picture(str(path), width=Pt(size_pt), height=Pt(size_pt))
+    return text_cell
 
 
-def _fill_card(cell, card: RenderedCard) -> None:
+def _ensure_trailing_paragraph(cell) -> None:
+    """Word requires a cell to end with a paragraph, not a table."""
+    if cell._tc[-1].tag != qn("w:p"):
+        p = cell.add_paragraph()
+        p.paragraph_format.space_before = Pt(0)
+        p.paragraph_format.space_after = Pt(0)
+        p.paragraph_format.line_spacing = Pt(1)
+
+
+def _fill_card(cell, card: RenderedCard, width: int) -> None:
     X.shade_cell(cell, CARD_BG)
     X.cell_borders(cell, left=CARD_LINE, bottom=CARD_LINE, size=4)
     # cell_borders clears the sides it is not given, so restore the full frame
     X.all_borders(cell, CARD_LINE, 4)
-    X.cell_margins(cell, top=120, bottom=120, left=160, right=160)
+    X.cell_margins(cell, top=120, bottom=120, left=CARD_PAD, right=CARD_PAD)
     cell.vertical_alignment = WD_ALIGN_VERTICAL.TOP
 
-    title = cell.paragraphs[0]
+    head = _icon_header(cell, card.icon, CARD_ICON_PT, width - 2 * CARD_PAD)
+    title = head.paragraphs[0]
     X.set_style(title, "CardTitle")
-    _icon_run(title, card.icon)
     title.add_run(card.title.upper())
 
     if card.subtitle.strip():
-        X.set_style(cell.add_paragraph(card.subtitle), "CardSubtitle")
+        X.set_style(head.add_paragraph(card.subtitle), "CardSubtitle")
+    # Close the heading's last paragraph flush with the icon so it centres.
+    head.paragraphs[-1].paragraph_format.space_after = Pt(0)
+    # Breathing room between the heading row and the card's body text.
+    gap = cell.add_paragraph()
+    gap.paragraph_format.space_after = Pt(0)
+    gap.paragraph_format.line_spacing = Pt(5)
 
     bullet_numpr = getattr(cell, "_bullet_numpr", None)
     for block in card.blocks:
@@ -80,6 +123,7 @@ def _fill_card(cell, card: RenderedCard) -> None:
             if block.title:
                 X.set_style(cell.add_paragraph(block.title), "CardSub")
             X.set_style(cell.add_paragraph(block.text), "CardBody")
+    _ensure_trailing_paragraph(cell)
 
 
 def _card_tables(doc, cards: list[RenderedCard], bullet_numpr):
@@ -100,7 +144,7 @@ def _card_tables(doc, cards: list[RenderedCard], bullet_numpr):
             X.fixed_columns(table, [CONTENT_W])
             cell = row.cells[0]
             cell._bullet_numpr = bullet_numpr
-            _fill_card(cell, cards[i])
+            _fill_card(cell, cards[i], CONTENT_W)
             i += 1
         else:
             X.fixed_columns(table, [HALF, GAP, HALF])
@@ -108,8 +152,8 @@ def _card_tables(doc, cards: list[RenderedCard], bullet_numpr):
             X.clear_borders(gap)
             left._bullet_numpr = bullet_numpr
             right._bullet_numpr = bullet_numpr
-            _fill_card(left, cards[i])
-            _fill_card(right, cards[i + 1])
+            _fill_card(left, cards[i], HALF)
+            _fill_card(right, cards[i + 1], HALF)
             i += 2
         tables.append(table)
         doc.add_paragraph()  # gap below the row
@@ -132,10 +176,11 @@ def _news_table(doc, news: list[RenderedNews]) -> None:
             X.cell_margins(cell, top=62, bottom=62, left=0, right=right_margin)
             cell.vertical_alignment = WD_ALIGN_VERTICAL.TOP
 
-        label = label_cell.paragraphs[0]
+        head = _icon_header(label_cell, item.icon, NEWS_ICON_PT, NEWS_LABEL_W - 180)
+        label = head.paragraphs[0]
         X.set_style(label, "NewsLabel")
-        _icon_run(label, item.icon, 10)
         label.add_run(item.label.upper())
+        _ensure_trailing_paragraph(label_cell)
 
         first = True
         for line in [l for l in item.lines if l.strip()]:
