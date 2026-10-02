@@ -130,7 +130,7 @@ def generate(req: GenerateRequest):
     )
 
     # ── 2. Generate ───────────────────────────────────────────────────────
-    messages   = [{"role": "user", "content": f"Editor's notes:\n{req.notes}"}]
+    messages   = [{"role": "user", "content": f"Editor's notes and instructions:\n{req.notes}"}]
     added: List[str] = []
     draft      = _call(system, messages)
     draft, a   = _split_added(draft)
