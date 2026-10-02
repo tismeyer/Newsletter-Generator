@@ -122,7 +122,9 @@ async def build_draft(req: DocumentRequest, provider: Provider) -> list[Rendered
             *[_one_box(provider, b, req.style, chapter) for b in chapter.boxes]
         )
         blocks.extend(boxes)
-        return RenderedChapter(heading=chapter.heading, blocks=blocks, provider_used=used)
+        return RenderedChapter(
+            heading=chapter.heading, icon=chapter.icon, blocks=blocks, provider_used=used
+        )
 
     usable = [c for c in req.chapters if c.heading.strip() or c.text.strip() or c.boxes]
     if not usable:

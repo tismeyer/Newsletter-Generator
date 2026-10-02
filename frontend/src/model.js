@@ -107,9 +107,10 @@ export const fmtDate = (iso) => {
 export const departmentFrom = (kicker) =>
   String(kicker || "").replace(/\s+(Newsletter|Bulletin)\s*$/i, "").trim() || kicker || "";
 
-export const newChapter = (heading = "") => ({
+export const newChapter = (heading = "", icon = "") => ({
   id: crypto.randomUUID ? crypto.randomUUID() : String(Math.random()),
   heading,
+  icon,
   text: "",
   treatment: "draft",
   box_policy: "inherit",
@@ -136,7 +137,7 @@ export const emptyState = () => ({
     box_policy: "ai",
     style_notes: "",
   },
-  chapters: [newChapter("Editorial"), newChapter("")],
+  chapters: [newChapter("Editorial", "pencil"), newChapter("", "info")],
   layout: "standard",
   cards: [newCard("warn"), newCard("star"), newCard("gear"), newCard("info")],
   news: [newNews("smile"), newNews("heart"), newNews("check")],
@@ -309,9 +310,13 @@ export function toPayload(s) {
     // draft already carries its highlight boxes as [ACTION]/[INFO] lines.
     chapters: s.chapters.filter(chapterUsed).map((c) =>
       hasDraft(c)
-        ? { heading: c.heading, treatment: "verbatim", text: c.draft, box_policy: "none", boxes: [] }
+        ? {
+            heading: c.heading, icon: c.icon || "",
+            treatment: "verbatim", text: c.draft, box_policy: "none", boxes: [],
+          }
         : {
             heading: c.heading,
+            icon: c.icon || "",
             treatment: c.treatment,
             text: c.text,
             box_policy: c.treatment === "verbatim" ? "none" : c.box_policy,

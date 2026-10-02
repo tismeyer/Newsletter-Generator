@@ -331,11 +331,16 @@ textarea.inline-field.grow{display:block;resize:none;overflow:hidden;min-height:
 .ed-chapters{padding:6px 20px 16px}
 .ed-chapter{padding-top:16px}
 .ed-chapter + .ed-chapter{margin-top:6px}
+.ed-h1row{display:flex;align-items:center;gap:9px;border-bottom:1px solid #0B2545;padding-bottom:5px;margin-bottom:8px}
+.ed-h1row:focus-within{border-bottom-color:#E4032E}
 .ed-paper input.inline-field.ed-h1{
-  display:block;width:100%;font-size:13px;font-weight:700;color:#E4032E;text-transform:uppercase;
-  letter-spacing:.14em;border-radius:0;border-width:0 0 1px;border-bottom-color:#0B2545;padding:3px 3px 5px;margin-bottom:8px;
+  flex:1;min-width:0;font-size:13px;font-weight:700;color:#E4032E;text-transform:uppercase;letter-spacing:.14em;
 }
-.ed-paper input.inline-field.ed-h1:focus{border-color:transparent transparent #E4032E;background:#fff}
+.iconbtn.none{border:1px dashed #b6bcc0;color:#b6bcc0;font-size:16px;font-weight:700;line-height:1;background:#fff}
+.iconbtn.none:hover{color:#E4032E;border-color:#E4032E;box-shadow:none}
+.iconmenu .noicon{display:block;width:26px;height:26px;border-radius:50%;border:1px dashed #b6bcc0}
+.p-h1{display:flex;align-items:center;gap:8px}
+.p-h1icon{width:27px;height:27px;flex:none}
 .ed-chapter .inline-field{color:#40494F}
 .ed-chapter textarea.ed-body{width:100%;font-size:13.5px;line-height:1.55}
 .ed-drafted{border-left:3px solid #3E6E9E;padding-left:6px}

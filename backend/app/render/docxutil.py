@@ -263,3 +263,11 @@ def set_size(paragraph, size_pt: float) -> None:
         for old in mark.findall(qn(tag)):
             mark.remove(old)
         mark.append(_el(tag, val=half_points))
+
+
+def raise_run(run, points: float) -> None:
+    """Lift a run above the baseline (w:position, in half-points)."""
+    rPr = run._r.get_or_add_rPr()
+    for old in rPr.findall(qn("w:position")):
+        rPr.remove(old)
+    rPr.append(_el("w:position", val=int(round(points * 2))))

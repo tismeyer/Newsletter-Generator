@@ -39,12 +39,25 @@ class Box(BaseModel):
     text: str = ""
 
 
+ICONS = [
+    "warn", "info", "star", "gear", "smile", "heart", "check", "plane",
+    "clock", "mail", "doc", "flag", "bolt", "cross", "snow", "pencil",
+    "team", "thumbup", "thumbdown", "entries", "exits",
+]
+
+
 class Chapter(BaseModel):
     heading: str = ""
+    icon: str = ""          # one of ICONS, or empty for a heading without one
     treatment: Treatment = Treatment.DRAFT
     text: str = ""
     box_policy: BoxPolicy = BoxPolicy.INHERIT
     boxes: list[Box] = Field(default_factory=list)
+
+    @field_validator("icon")
+    @classmethod
+    def _known_icon(cls, v: str) -> str:
+        return v if v in ICONS else ""
 
     @field_validator("boxes")
     @classmethod
@@ -59,11 +72,6 @@ class Layout(str, Enum):
     ONE_PAGER = "one_pager"   # four cards plus short news, on a single page
 
 
-ICONS = [
-    "warn", "info", "star", "gear", "smile", "heart", "check", "plane",
-    "clock", "mail", "doc", "flag", "bolt", "cross", "snow", "pencil",
-    "team", "thumbup", "thumbdown", "entries", "exits",
-]
 
 
 class Card(BaseModel):
@@ -176,6 +184,7 @@ class RenderedBlock(BaseModel):
 
 class RenderedChapter(BaseModel):
     heading: str
+    icon: str = ""
     blocks: list[RenderedBlock]
     provider_used: str
 

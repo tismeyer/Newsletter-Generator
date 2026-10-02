@@ -1,5 +1,6 @@
 import { GrowText } from "./Bits.jsx";
 import ReviseBar from "./DraftTools.jsx";
+import IconButton from "./IconButton.jsx";
 import {
   MAX_CHAPTERS,
   TREATMENTS,
@@ -95,14 +96,22 @@ function Chapter({ chapter, index, ctx, onChange, onRemove }) {
 
   return (
     <section className="ed-chapter">
-      <input
-        type="text"
-        className="inline-field ed-h1"
-        placeholder={name + " title"}
-        aria-label={name + " title"}
-        value={chapter.heading}
-        onChange={(e) => set("heading", e.target.value)}
-      />
+      <div className="ed-h1row">
+        <IconButton
+          value={chapter.icon || ""}
+          onChange={(v) => set("icon", v)}
+          size={28}
+          allowNone
+        />
+        <input
+          type="text"
+          className="inline-field ed-h1"
+          placeholder={name + " title"}
+          aria-label={name + " title"}
+          value={chapter.heading}
+          onChange={(e) => set("heading", e.target.value)}
+        />
+      </div>
 
       {drafted ? (
         <DraftEditor
@@ -227,7 +236,7 @@ export default function Chapters({ chapters, patch, notify, style, provider }) {
           onClick={() =>
             chapters.length >= MAX_CHAPTERS
               ? notify(`Maximum of ${MAX_CHAPTERS} chapters.`)
-              : set([...chapters, newChapter("")])
+              : set([...chapters, newChapter("", "info")])
           }
         >
           + Add chapter

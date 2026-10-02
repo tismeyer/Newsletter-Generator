@@ -63,7 +63,10 @@ function ChapterPreview({ chapter }) {
 
   return (
     <>
-      <div className="p-h1">{chapter.heading || "Chapter title"}</div>
+      <div className="p-h1">
+        {chapter.icon && <img className="p-h1icon" src={ICON_SRC[chapter.icon]} alt="" />}
+        {chapter.heading || "Chapter title"}
+      </div>
       {body()}
       {!blocks &&
         chapter.boxes.map((b, i) => (

@@ -26,6 +26,9 @@ RED_BG = "FBE7EA"
 RED_BAR = "E4032E"
 
 CONTENT_W = Twips(9638)  # A4 minus 2 cm margins, matching the template
+ASSETS = TEMPLATE.parent
+ICON_PT = 20             # round chapter icon beside the heading
+HEADING_RAISE_PT = 6     # lifts the 10 pt heading text to the icon's middle
 
 
 def _fmt_date(d) -> str:
@@ -86,7 +89,17 @@ def render_document(masthead: Masthead, chapters: list[RenderedChapter]) -> byte
 
     # ---- chapters ----
     for chapter in chapters:
-        X.set_style(doc.add_paragraph(chapter.heading), "Heading1")
+        heading = doc.add_paragraph()
+        X.set_style(heading, "Heading1")
+        icon = ASSETS / f"ic_{chapter.icon}.png"
+        if chapter.icon and icon.exists():
+            heading.add_run().add_picture(str(icon), width=Pt(ICON_PT), height=Pt(ICON_PT))
+            # An inline picture sits on the text baseline, so the text would hug
+            # the icon's bottom edge; raise it to line up with the icon's centre.
+            text = heading.add_run("\u2002" + chapter.heading)
+            X.raise_run(text, HEADING_RAISE_PT)
+        else:
+            heading.add_run(chapter.heading)
         for block in chapter.blocks:
             if block.kind == "body":
                 for para in [t for t in block.text.split("\n") if t.strip()]:

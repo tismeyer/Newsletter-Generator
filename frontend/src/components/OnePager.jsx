@@ -1,8 +1,7 @@
-import { useEffect, useRef, useState } from "react";
 import { GrowText } from "./Bits.jsx";
 import ReviseBar from "./DraftTools.jsx";
+import IconButton from "./IconButton.jsx";
 import {
-  ICONS,
   TREATMENTS,
   TREATMENT_COPY,
   cardFilled,
@@ -11,7 +10,6 @@ import {
   onePagerSize,
 } from "../model.js";
 import { MAX_PT, MIN_PT, budget, cardLimit, isFullWidth } from "../budget.js";
-import { ICON_SRC } from "../icons.js";
 
 /** Live character counter. Turns amber near the limit and red past it. */
 function Counter({ used, limit }) {
@@ -21,70 +19,6 @@ function Counter({ used, limit }) {
     <span className={"counter " + state}>
       {used} / {limit}
       {state === "over" && " \u2014 will not fit on one page"}
-    </span>
-  );
-}
-
-/** Closes a popover on an outside click or Escape. */
-function useDismiss(open, setOpen) {
-  const ref = useRef(null);
-  useEffect(() => {
-    if (!open) return;
-    const away = (e) => {
-      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
-    };
-    const esc = (e) => e.key === "Escape" && setOpen(false);
-    document.addEventListener("mousedown", away);
-    document.addEventListener("keydown", esc);
-    return () => {
-      document.removeEventListener("mousedown", away);
-      document.removeEventListener("keydown", esc);
-    };
-  }, [open, setOpen]);
-  return ref;
-}
-
-/**
- * The round icon exactly as it prints. Clicking it opens the full set to pick
- * from, so the choice is made by sight and in place.
- */
-function IconButton({ value, onChange, size }) {
-  const [open, setOpen] = useState(false);
-  const ref = useDismiss(open, setOpen);
-  const current = ICONS.find((i) => i.v === value);
-  return (
-    <span className="iconbtn-wrap" ref={ref}>
-      <button
-        type="button"
-        className="iconbtn"
-        style={{ width: size, height: size }}
-        title={"Icon: " + (current ? current.label : value) + " (click to change)"}
-        aria-label="Change icon"
-        aria-expanded={open}
-        onClick={() => setOpen((o) => !o)}
-      >
-        <img src={ICON_SRC[value]} alt="" />
-      </button>
-      {open && (
-        <div className="iconmenu" role="radiogroup" aria-label="Icon">
-          {ICONS.map((i) => (
-            <button
-              key={i.v}
-              type="button"
-              role="radio"
-              aria-checked={value === i.v}
-              className={value === i.v ? "on" : ""}
-              onClick={() => {
-                onChange(i.v);
-                setOpen(false);
-              }}
-            >
-              <img src={ICON_SRC[i.v]} alt="" />
-              <span>{i.label}</span>
-            </button>
-          ))}
-        </div>
-      )}
     </span>
   );
 }
