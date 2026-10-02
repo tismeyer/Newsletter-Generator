@@ -423,7 +423,7 @@ textarea.inline-field.grow{display:block;resize:none;overflow:hidden;min-height:
 /* ---------- start page ---------- */
 .landing{min-height:100%;padding:56px 16px 64px;display:flex;flex-direction:column;align-items:center}
 .ld-head{text-align:center;margin-bottom:34px}
-.ld-logo{height:34px;margin-bottom:22px}
+.ld-logo{height:40px;margin-bottom:24px}
 .ld-head h1{margin:0;font-size:28px;color:var(--navy);letter-spacing:-.01em}
 .ld-head p{margin:6px 0 0;color:var(--muted);font-size:15px}
 .ld-head p + p{margin-top:2px}

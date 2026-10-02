@@ -1,4 +1,4 @@
-import logo from "../assets/logo.png";
+import logo from "../assets/logo-clear.png";
 import wizard from "../assets/rosie-newsletter.webp";
 import rosie from "../assets/rosie-apm.webp";
 
@@ -9,7 +9,7 @@ const TOOLS = [
     title: "Write Manual Content",
     by: "Rosie's APM Editor",
     text: "Turn your notes into APM-conformant text for the manuals. Rosie follows the APM language and WebManuals rules, checks the result and marks anything to confirm.",
-    go: "Open Rosie",
+    go: "Open Rosie's APM Editor",
   },
   {
     href: "#/newsletter",
