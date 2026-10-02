@@ -11,6 +11,7 @@ import { draft, getProviders, renderDocument } from "./api.js";
 
 const PROVIDER_LABEL = {
   claude: "Claude",
+  azure: "Microsoft (Azure OpenAI)",
   copilot: "Microsoft Copilot",
   manual: "No AI (my text only)",
 };

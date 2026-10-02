@@ -18,6 +18,12 @@ class Settings:
     copilot_client_id: str | None = os.getenv("COPILOT_CLIENT_ID")
     copilot_client_secret: str | None = os.getenv("COPILOT_CLIENT_SECRET")
 
+    # Azure OpenAI / Microsoft Foundry: GPT in helvetic's own Azure
+    azure_openai_endpoint: str | None = os.getenv("AZURE_OPENAI_ENDPOINT")  # https://<name>.openai.azure.com
+    azure_openai_key: str | None = os.getenv("AZURE_OPENAI_KEY")
+    azure_openai_deployment: str | None = os.getenv("AZURE_OPENAI_DEPLOYMENT")  # the deployment's name
+    azure_openai_api_version: str = os.getenv("AZURE_OPENAI_API_VERSION", "2024-10-21")
+
     # Comma-separated list of allowed frontend origins.
     cors_origins: list[str] = [
         o.strip() for o in os.getenv("CORS_ORIGINS", "http://localhost:5173").split(",") if o.strip()

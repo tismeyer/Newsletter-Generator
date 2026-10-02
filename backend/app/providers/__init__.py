@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from ..config import settings
 from .base import GenerationError, Provider
+from .azure_openai import AzureOpenAIProvider
 from .claude import ClaudeProvider
 from .copilot import CopilotProvider
 from .manual import ManualProvider
 
-_REGISTRY = {"claude": ClaudeProvider, "copilot": CopilotProvider, "manual": ManualProvider}
+_REGISTRY = {"claude": ClaudeProvider, "azure": AzureOpenAIProvider, "copilot": CopilotProvider, "manual": ManualProvider}
 
 
 def get_provider(name: str | None) -> Provider:
@@ -22,6 +23,9 @@ def available() -> dict[str, bool]:
         "claude": bool(settings.anthropic_api_key),
         "copilot": all(
             [settings.copilot_tenant_id, settings.copilot_client_id, settings.copilot_client_secret]
+        ),
+        "azure": all(
+            [settings.azure_openai_endpoint, settings.azure_openai_key, settings.azure_openai_deployment]
         ),
         "manual": True,
     }

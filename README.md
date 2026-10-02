@@ -90,6 +90,10 @@ boxes.
 interface:
 
 - `claude.py` — Anthropic Messages API. Works today.
+- `azure_openai.py` — GPT through Azure OpenAI / Microsoft Foundry in
+  helvetic's own Azure. Set `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_KEY` and
+  `AZURE_OPENAI_DEPLOYMENT` on Railway and "Microsoft (Azure OpenAI)" appears in
+  the writer menu.
 - `copilot.py` — Microsoft Graph Copilot Chat API. Fill in the three
   `COPILOT_*` variables once the Entra app registration exists. The endpoint is
   in preview, so its request/response shapes are the part most likely to need
