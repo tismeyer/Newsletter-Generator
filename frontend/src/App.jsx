@@ -134,7 +134,7 @@ export default function App() {
           </select>
           <button className="btn small" onClick={saveDraft}>Save draft</button>
           <button className="btn small" onClick={loadDraft}>Load draft</button>
-          <button className="btn small" onClick={onDraft} disabled={Boolean(busy)}>
+          <button className="btn go small" onClick={onDraft} disabled={Boolean(busy)}>
             {busy === "draft" ? "Writing\u2026" : "Generate text"}
           </button>
           <button className="btn primary small" onClick={onRender} disabled={Boolean(busy)}>
