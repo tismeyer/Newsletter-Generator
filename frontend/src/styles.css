@@ -106,7 +106,7 @@ textarea{resize:vertical; min-height:74px; line-height:1.5}
 /* ---------- paper preview ---------- */
 .stagebar{display:flex; gap:8px; align-items:center; width:100%; max-width:794px; color:var(--muted); font-size:12px}
 .stagebar .spacer{flex:1}
-.paperwrap{width:100%; max-width:794px}
+.paperwrap{width:100%; max-width:794px; position:relative}
 .paper{
   width:794px; min-height:1123px; background:#fff; color:#40494F;
   transform-origin:top left; box-shadow:0 1px 3px rgba(0,0,0,.2), 0 10px 30px rgba(0,0,0,.13);
@@ -506,3 +506,26 @@ textarea.inline-field.grow{display:block;resize:none;overflow:hidden;min-height:
 .apm-srchint{margin:8px 0 0;line-height:1.45}
 .apm-added{border-left:3px solid #F2C200;background:#FFFBE6}
 .apm-added ul{margin:6px 0 0;padding-left:20px;display:flex;flex-direction:column;gap:4px;font-size:13px}
+
+/* --- chapter layout: preview at the Word template's real sizes (pt × 4/3 = px) --- */
+.sheets{display:flex;flex-direction:column;width:794px;transform-origin:top left}
+.paper.word{height:1123px;min-height:0;overflow:hidden;padding:100px 76px 87px}
+.paper.word .p-head{position:absolute;top:40px;left:76px;right:76px}
+.paper.word .p-head .kick{font-size:13.3px}
+.paper.word .p-head img.ico{width:20px;height:20px;vertical-align:-4px}
+.paper.word .p-head img.logo{width:128px}
+.paper.word .p-foot{left:76px;right:76px;bottom:47px;font-size:10.7px}
+.p-flow{display:flex;flex-direction:column}
+.paper.word .p-title{font-size:37.3px;line-height:1.15;margin:0 0 5.3px}
+.paper.word .p-headline{font-size:18.7px;line-height:1.15;margin-bottom:2.7px}
+.paper.word .p-date{font-size:14px;line-height:1.15;margin:0 0 14.7px;padding-bottom:13.3px;border-bottom-width:1px}
+.paper.word .p-h1{font-size:13.3px;letter-spacing:2px;line-height:1.15;margin:28px 0 8px;padding-bottom:5.3px;border-bottom-width:1.3px}
+.paper.word .p-h1icon{width:26.7px;height:26.7px}
+.paper.word .p-body{font-size:14px;line-height:1.34;margin:0 0 9.3px}
+.paper.word .p-ul{margin:0;padding-left:26.7px;list-style:none}
+.paper.word .p-ul li{font-size:14px;line-height:1.34;margin:0 0 9.3px;position:relative}
+.paper.word .p-ul li::before{content:"\2013";position:absolute;left:-17.4px;color:#E4032E;font-weight:700}
+.paper.word .p-box{padding:10px 16px;margin:0 0 16px}
+.paper.word .p-box .bt{font-size:12px;line-height:1.15;letter-spacing:1.3px;margin-bottom:5.3px}
+.paper.word .p-box p{font-size:13.3px;line-height:1.29;margin:0 0 4px}
+.p-measure{position:absolute;left:-10000px;top:0;visibility:hidden;pointer-events:none}
