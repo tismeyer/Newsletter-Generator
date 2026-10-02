@@ -59,7 +59,11 @@ class Layout(str, Enum):
     ONE_PAGER = "one_pager"   # four cards plus short news, on a single page
 
 
-ICONS = ["warn", "star", "gear", "info", "smile", "heart", "check"]
+ICONS = [
+    "warn", "info", "star", "gear", "smile", "heart", "check", "plane",
+    "clock", "mail", "doc", "flag", "bolt", "cross", "snow", "pencil",
+    "team", "thumbup", "thumbdown", "entries", "exits",
+]
 
 
 class Card(BaseModel):

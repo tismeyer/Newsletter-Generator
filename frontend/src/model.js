@@ -21,13 +21,27 @@ export const LAYOUTS = [
 ];
 
 export const ICONS = [
-  { v: "warn", label: "Warning" },
-  { v: "star", label: "Star" },
+  { v: "warn", label: "Safety" },
+  { v: "info", label: "Important" },
+  { v: "star", label: "New" },
   { v: "gear", label: "Operations" },
-  { v: "info", label: "Info" },
   { v: "smile", label: "People" },
   { v: "heart", label: "Wellbeing" },
-  { v: "check", label: "Tick" },
+  { v: "check", label: "Done" },
+  { v: "plane", label: "Flight ops" },
+  { v: "clock", label: "Deadline" },
+  { v: "mail", label: "Contact" },
+  { v: "doc", label: "Manual" },
+  { v: "flag", label: "Priority" },
+  { v: "bolt", label: "Urgent" },
+  { v: "cross", label: "Medical" },
+  { v: "snow", label: "Winter" },
+  { v: "pencil", label: "Editorial" },
+  { v: "team", label: "Team" },
+  { v: "thumbup", label: "Praise" },
+  { v: "thumbdown", label: "Watch out" },
+  { v: "entries", label: "Entries" },
+  { v: "exits", label: "Exits" },
 ];
 
 export const newCard = (icon = "info") => ({

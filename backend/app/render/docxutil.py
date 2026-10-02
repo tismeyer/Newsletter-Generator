@@ -121,11 +121,24 @@ def find_bullet_numpr(doc):
 
 
 def apply_numpr(paragraph, numPr) -> None:
+    """Attach a numbering reference, respecting the schema's element order.
+
+    w:numPr must come immediately after w:pStyle and before w:spacing, w:ind and
+    w:rPr. Appending it at the end produces a pPr that Word and LibreOffice
+    silently reject, and the paragraph then loses its style's run properties -
+    which shows up as bullets rendering at the document's default size while the
+    surrounding body text is correct.
+    """
     import copy
 
     if numPr is None:
         return
-    paragraph._p.get_or_add_pPr().append(copy.deepcopy(numPr))
+    pPr = paragraph._p.get_or_add_pPr()
+    for old in pPr.findall(qn("w:numPr")):
+        pPr.remove(old)
+    style = pPr.find(qn("w:pStyle"))
+    index = list(pPr).index(style) + 1 if style is not None else 0
+    pPr.insert(index, copy.deepcopy(numPr))
 
 
 def replace_in_part(part, mapping: dict[str, str]) -> None:

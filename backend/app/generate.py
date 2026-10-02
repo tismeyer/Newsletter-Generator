@@ -24,6 +24,21 @@ from .schemas import (
 )
 
 BULLET_RE = re.compile(r"^\s*[-*\u2022\u2013]\s+")
+# Lines that belong to the prompt, not to the document. A model asked only to
+# proofread will sometimes return the surrounding scaffolding as if it were part
+# of the text, so it is removed here as well as forbidden in the prompt.
+SCAFFOLD_RE = re.compile(
+    r"^\s*(?:</?(?:text|heading)>"
+    r"|-{2,}\s*(?:editor'?s text|end)\s*-{2,}"
+    r"|(?:chapter )?heading\s*:.*"
+    r"|corrected text\s*:.*)\s*$",
+    re.I,
+)
+
+
+def strip_scaffolding(text: str) -> str:
+    kept = [l for l in text.split("\n") if not SCAFFOLD_RE.match(l)]
+    return "\n".join(kept).strip()
 MARKER_RE = re.compile(r"^\s*\[(ACTION|INFO)\]\s*", re.I)
 
 
@@ -76,7 +91,7 @@ async def _chapter_text(provider: Provider, chapter: Chapter, style: StyleSpec) 
     may_boxes = effective_box_policy(chapter, style)
     prompt = chapter_prompt(chapter, style, may_boxes)
     text = await provider.complete(HOUSE_STYLE, prompt, max_tokens=1600)
-    return text, provider.name
+    return strip_scaffolding(text), provider.name
 
 
 async def _one_box(provider: Provider, box, style: StyleSpec, chapter: Chapter) -> RenderedBlock:
@@ -125,7 +140,7 @@ async def _box_text(provider: Provider, treatment: Treatment, text: str,
             "longer text will not fit."
         )
     out = await provider.complete(HOUSE_STYLE, prompt, max_tokens=900)
-    return out, provider.name
+    return strip_scaffolding(out), provider.name
 
 
 async def build_one_pager(req: DocumentRequest, provider: Provider):

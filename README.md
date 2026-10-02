@@ -124,9 +124,15 @@ The start command comes from `backend/Procfile`. To override it, use
 Settings -> Deploy -> Custom Start Command:
 `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
 
-Note: a `railway.json` placed in `backend/` is ignored unless its absolute path
-is given in the service settings, because the config file does not follow the
-Root Directory. The Procfile does.
+Note on config files: a `railway.json` is always read from the **repository
+root**, even when Root Directory is set to `/backend`. A build command written
+there therefore runs with the wrong working directory and fails with
+"Could not open requirements file: backend/requirements.txt". Use the Root
+Directory setting plus `backend/Procfile` instead, and keep no `railway.json`
+in the repository. (If Root Directory is genuinely unavailable on your plan, the
+alternative is a root-level `railway.json` **and** a root `requirements.txt`
+containing `-r backend/requirements.txt` - but then do not also set Root
+Directory, or the two conflict.)
 
 Optional: Settings -> Watch Paths -> `/backend/**` so frontend commits do not
 rebuild the API.

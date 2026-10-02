@@ -80,11 +80,14 @@ def chapter_prompt(chapter: Chapter, style: StyleSpec, may_add_boxes: bool) -> s
     """Prompt for the running text of one chapter."""
     if chapter.treatment is Treatment.POLISH:
         task = (
-            "Proofread the text below. Correct spelling, grammar, punctuation and "
-            "obvious typos ONLY. Do not rewrite, reorder, shorten, expand or "
-            "restyle anything. Keep the author's wording, sentence structure, "
-            "line breaks and list formatting. Return the corrected text and "
-            "nothing else."
+            "Proofread the text inside the <text> element below. Correct "
+            "spelling, grammar, punctuation and obvious typos ONLY. Do not "
+            "rewrite, reorder, shorten, expand or restyle anything. Keep the "
+            "author's wording, sentence structure, line breaks and list "
+            "formatting.\n"
+            "Output the corrected text only. Do not output the <text> tags, the "
+            "chapter heading, or any label, heading or separator line that is "
+            "part of these instructions."
         )
         constraints = ""
     else:
@@ -106,8 +109,8 @@ def chapter_prompt(chapter: Chapter, style: StyleSpec, may_add_boxes: bool) -> s
 
     return (
         f"{task}{constraints}{box_note}\n\n"
-        f"Chapter heading: {chapter.heading or '(none)'}\n"
-        f"--- editor's text ---\n{chapter.text.strip()}\n--- end ---"
+        f"<heading>{chapter.heading or '(none)'}</heading>\n"
+        f"<text>\n{chapter.text.strip()}\n</text>"
     )
 
 

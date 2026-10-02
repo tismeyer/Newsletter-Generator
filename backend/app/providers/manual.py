@@ -12,8 +12,6 @@ class ManualProvider(Provider):
     name = "manual"
 
     async def complete(self, system: str, prompt: str, max_tokens: int = 1200) -> str:
-        marker = "--- editor's text ---"
-        if marker in prompt:
-            body = prompt.split(marker, 1)[1]
-            return body.rsplit("--- end ---", 1)[0].strip()
+        if "<text>" in prompt:
+            return prompt.split("<text>", 1)[1].rsplit("</text>", 1)[0].strip()
         return ""

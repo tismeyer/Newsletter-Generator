@@ -7,6 +7,7 @@ import {
   newsFilled,
 } from "../model.js";
 import { budget, cardLimit, isFullWidth } from "../budget.js";
+import { ICON_SRC } from "../icons.js";
 
 /** Live character counter. Turns amber near the limit and red past it. */
 function Counter({ used, limit }) {
@@ -20,15 +21,28 @@ function Counter({ used, limit }) {
   );
 }
 
-function IconPicker({ value, onChange }) {
+/** Radio group showing the actual icons, so the choice is made by sight. */
+function IconPicker({ value, onChange, name }) {
   return (
-    <select value={value} onChange={(e) => onChange(e.target.value)} aria-label="Icon">
+    <div className="iconpick" role="radiogroup" aria-label="Icon">
       {ICONS.map((i) => (
-        <option key={i.v} value={i.v}>
-          {i.label}
-        </option>
+        <label
+          key={i.v}
+          className={"icontile" + (value === i.v ? " on" : "")}
+          title={i.label}
+        >
+          <input
+            type="radio"
+            name={name}
+            value={i.v}
+            checked={value === i.v}
+            onChange={() => onChange(i.v)}
+          />
+          <img src={ICON_SRC[i.v]} alt="" />
+          <span>{i.label}</span>
+        </label>
       ))}
-    </select>
+    </div>
   );
 }
 
@@ -55,20 +69,23 @@ function Card({ card, index, activeCards, activeNews, onChange, onClear }) {
         )}
       </summary>
       <div className="inner">
-        <div className="grid g2">
-          <label className="f">
-            <span>Title</span>
-            <input
-              type="text"
-              placeholder="e.g. Flight Safety Spotlight"
-              value={card.title}
-              onChange={(e) => set("title", e.target.value)}
-            />
-          </label>
-          <label className="f">
-            <span>Icon</span>
-            <IconPicker value={card.icon} onChange={(v) => set("icon", v)} />
-          </label>
+        <label className="f">
+          <span>Title</span>
+          <input
+            type="text"
+            placeholder="e.g. Flight Safety Spotlight"
+            value={card.title}
+            onChange={(e) => set("title", e.target.value)}
+          />
+        </label>
+
+        <div className="f mt10">
+          <span className="hint block">Icon</span>
+          <IconPicker
+            name={"card-icon-" + card.id}
+            value={card.icon}
+            onChange={(v) => set("icon", v)}
+          />
         </div>
 
         <label className="f mt10">
@@ -131,20 +148,22 @@ function NewsRow({ item, index, limit, onChange, onClear }) {
           </button>
         )}
       </div>
-      <div className="grid g2">
-        <label className="f">
-          <span>Label</span>
-          <input
-            type="text"
-            placeholder="e.g. Team news"
-            value={item.label}
-            onChange={(e) => set("label", e.target.value)}
-          />
-        </label>
-        <label className="f">
-          <span>Icon</span>
-          <IconPicker value={item.icon} onChange={(v) => set("icon", v)} />
-        </label>
+      <label className="f">
+        <span>Label</span>
+        <input
+          type="text"
+          placeholder="e.g. Team news"
+          value={item.label}
+          onChange={(e) => set("label", e.target.value)}
+        />
+      </label>
+      <div className="f mt8">
+        <span className="hint block">Icon</span>
+        <IconPicker
+          name={"news-icon-" + item.id}
+          value={item.icon}
+          onChange={(v) => set("icon", v)}
+        />
       </div>
       <label className="f mt8">
         <span className="rowlabel">

@@ -3,6 +3,7 @@ import logo from "../assets/logo.png";
 import icon from "../assets/icon.png";
 import { cardFilled, departmentFrom, fmtDate, newsFilled } from "../model.js";
 import { isFullWidth } from "../budget.js";
+import { ICON_SRC } from "../icons.js";
 
 const SHEET_W = 794; // A4 at 96 dpi
 
@@ -113,7 +114,7 @@ function OnePagerPreview({ state, drafted }) {
       <div className={"p-cardrow" + (full ? " one" : "")} key={i}>
         {(full ? [cards[i]] : [cards[i], cards[i + 1]]).filter(Boolean).map((c, j) => (
           <div className="p-card" key={j}>
-            <div className="p-cardtitle">{c.title || "Card title"}</div>
+            <div className="p-cardtitle"><img src={ICON_SRC[c.icon]} alt="" />{c.title || "Card title"}</div>
             {c.subtitle && <div className="p-cardsub">{c.subtitle}</div>}
             {cardInner(c)}
           </div>
@@ -129,7 +130,7 @@ function OnePagerPreview({ state, drafted }) {
         <div className="p-news">
           {news.map((n, i) => (
             <div className="p-newsrow" key={i}>
-              <div className="p-newslabel">{n.label || "Label"}</div>
+              <div className="p-newslabel"><img src={ICON_SRC[n.icon]} alt="" />{n.label || "Label"}</div>
               <div className="p-newstext">
                 {(drafted ? n.lines : (n.text || "").split(/\n+/))
                   .filter((l) => l.trim())
