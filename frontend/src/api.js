@@ -1,4 +1,10 @@
-const BASE = import.meta.env.VITE_API_BASE || "";
+// Tolerate a trailing slash or an accidental "/api" suffix in the configured
+// base URL: both produce 404s that look like a server fault rather than a
+// configuration one.
+const BASE = (import.meta.env.VITE_API_BASE || "")
+  .trim()
+  .replace(/\/+$/, "")
+  .replace(/\/api$/, "");
 
 async function post(path, body) {
   const r = await fetch(BASE + path, {

@@ -15,6 +15,35 @@ export const DOC_TYPES = ["Newsletter", "Bulletin"];
 export const CUSTOM = "Custom\u2026";
 export const MAX_CHAPTERS = 10;
 
+export const LAYOUTS = [
+  { v: "standard", label: "Newsletter / bulletin", hint: "Chapters over as many pages as needed." },
+  { v: "one_pager", label: "1-page bulletin", hint: "Four cards and three short-news rows on a single page." },
+];
+
+export const ICONS = [
+  { v: "warn", label: "Warning" },
+  { v: "star", label: "Star" },
+  { v: "gear", label: "Operations" },
+  { v: "info", label: "Info" },
+  { v: "smile", label: "People" },
+  { v: "heart", label: "Wellbeing" },
+  { v: "check", label: "Tick" },
+];
+
+export const newCard = (icon = "info") => ({
+  id: crypto.randomUUID ? crypto.randomUUID() : String(Math.random()),
+  icon, title: "", subtitle: "", text: "", treatment: "draft",
+});
+
+export const newNews = (icon = "smile") => ({
+  id: crypto.randomUUID ? crypto.randomUUID() : String(Math.random()),
+  icon, label: "", text: "", treatment: "draft",
+});
+
+/** A box counts towards the layout only once it has a title or some text. */
+export const cardFilled = (c) => Boolean(c.title.trim() || c.text.trim());
+export const newsFilled = (n) => Boolean(n.label.trim() || n.text.trim());
+
 export const TREATMENTS = [
   { v: "verbatim", label: "Keep exactly as is" },
   { v: "polish", label: "Proofread only" },
@@ -88,18 +117,23 @@ export const emptyState = () => ({
     style_notes: "",
   },
   chapters: [newChapter("Editorial"), newChapter("")],
+  layout: "standard",
+  cards: [newCard("warn"), newCard("star"), newCard("gear"), newCard("info")],
+  news: [newNews("smile"), newNews("heart"), newNews("check")],
   provider: "claude",
 });
 
 /** The exact object the backend receives. */
 export function toPayload(s) {
-  return {
+  const base = {
     masthead: {
       ...s.masthead,
       footer_issued_by:
         s.masthead.footer_issued_by || departmentFrom(s.masthead.header_kicker),
     },
     style: s.style,
+    layout: s.layout,
+    provider: s.provider,
     chapters: s.chapters
       .filter((c) => c.heading.trim() || c.text.trim() || c.boxes.length)
       .map((c) => ({
@@ -109,6 +143,21 @@ export function toPayload(s) {
         box_policy: c.treatment === "verbatim" ? "none" : c.box_policy,
         boxes: c.boxes.map((b) => ({ type: b.type, title: b.title, text: b.text })),
       })),
-    provider: s.provider,
+  };
+
+  if (s.layout !== "one_pager") return { ...base, cards: [], news: [] };
+
+  // Unused boxes are dropped here, not in the renderer: the remaining boxes
+  // then receive their share of the page.
+  return {
+    ...base,
+    chapters: [],
+    cards: s.cards.filter(cardFilled).map((c) => ({
+      icon: c.icon, title: c.title, subtitle: c.subtitle,
+      text: c.text, treatment: c.treatment,
+    })),
+    news: s.news.filter(newsFilled).map((n) => ({
+      icon: n.icon, label: n.label, text: n.text, treatment: n.treatment,
+    })),
   };
 }

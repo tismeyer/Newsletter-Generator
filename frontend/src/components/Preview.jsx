@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import logo from "../assets/logo.png";
 import icon from "../assets/icon.png";
-import { departmentFrom, fmtDate } from "../model.js";
+import { cardFilled, departmentFrom, fmtDate, newsFilled } from "../model.js";
+import { isFullWidth } from "../budget.js";
 
 const SHEET_W = 794; // A4 at 96 dpi
 
@@ -68,6 +69,82 @@ function ChapterPreview({ chapter, drafted }) {
   );
 }
 
+/** Card and short-news preview for the one-page layout. */
+function OnePagerPreview({ state, drafted }) {
+  const cards = drafted ? drafted.cards : state.cards.filter(cardFilled);
+  const news = drafted ? drafted.news : state.news.filter(newsFilled);
+
+  const cardInner = (c) => {
+    if (drafted)
+      return c.blocks.map((b, i) =>
+        b.kind === "bullets" ? (
+          <ul className="p-ul" key={i}>
+            {b.items.map((t, j) => (
+              <li key={j}>{t}</li>
+            ))}
+          </ul>
+        ) : (
+          <p className="p-cardbody" key={i}>
+            {b.text}
+          </p>
+        )
+      );
+    const text = (c.text || "").trim();
+    if (!text) return <p className="p-cardbody p-ghost">Text will be written from your notes.</p>;
+    if (c.treatment === "draft")
+      return <p className="p-cardbody p-ghost">Finished text will be written from your notes.</p>;
+    return text.split(/\n+/).map((line, i) => {
+      const t = line.trim();
+      if (!t) return null;
+      return /^[-*\u2022]\s+/.test(t) ? (
+        <ul className="p-ul" key={i}>
+          <li>{t.replace(/^[-*\u2022]\s+/, "")}</li>
+        </ul>
+      ) : (
+        <p className="p-cardbody" key={i}>{t}</p>
+      );
+    });
+  };
+
+  const rows = [];
+  for (let i = 0; i < cards.length; i += 2) {
+    const full = isFullWidth(i, cards.length);
+    rows.push(
+      <div className={"p-cardrow" + (full ? " one" : "")} key={i}>
+        {(full ? [cards[i]] : [cards[i], cards[i + 1]]).filter(Boolean).map((c, j) => (
+          <div className="p-card" key={j}>
+            <div className="p-cardtitle">{c.title || "Card title"}</div>
+            {c.subtitle && <div className="p-cardsub">{c.subtitle}</div>}
+            {cardInner(c)}
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {rows}
+      {news.length > 0 && (
+        <div className="p-news">
+          {news.map((n, i) => (
+            <div className="p-newsrow" key={i}>
+              <div className="p-newslabel">{n.label || "Label"}</div>
+              <div className="p-newstext">
+                {(drafted ? n.lines : (n.text || "").split(/\n+/))
+                  .filter((l) => l.trim())
+                  .map((l, j) => (
+                    <p key={j}>{l}</p>
+                  ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </>
+  );
+}
+
 export default function Preview({ state, drafted }) {
   const wrapRef = useRef(null);
   const sheetRef = useRef(null);
@@ -113,9 +190,13 @@ export default function Preview({ state, drafted }) {
           </div>
           <div className="p-date">{fmtDate(m.publication_date)}</div>
 
-          {visible.map((c, i) => (
-            <ChapterPreview key={c.id} chapter={c} drafted={drafted?.chapters?.[i]} />
-          ))}
+          {state.layout === "one_pager" ? (
+            <OnePagerPreview state={state} drafted={drafted} />
+          ) : (
+            visible.map((c, i) => (
+              <ChapterPreview key={c.id} chapter={c} drafted={drafted?.chapters?.[i]} />
+            ))
+          )}
 
           <div className="p-foot">
             <div className="l">

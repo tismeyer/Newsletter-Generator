@@ -2,8 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 import Masthead from "./components/Masthead.jsx";
 import StylePanel from "./components/StylePanel.jsx";
 import Chapters from "./components/Chapters.jsx";
+import OnePager from "./components/OnePager.jsx";
 import Preview from "./components/Preview.jsx";
-import { emptyState, toPayload } from "./model.js";
+import { LAYOUTS, emptyState, toPayload } from "./model.js";
 import { draft, getProviders, renderDocx } from "./api.js";
 
 const DRAFT_KEY = "nlb:draft";
@@ -41,8 +42,18 @@ export default function App() {
 
   const payload = useMemo(() => toPayload(state), [state]);
 
+  const hasContent =
+    state.layout === "one_pager"
+      ? payload.cards.length || payload.news.length
+      : payload.chapters.length;
+
   const onDraft = async () => {
-    if (!payload.chapters.length) return notify("Add at least one chapter first.");
+    if (!hasContent)
+      return notify(
+        state.layout === "one_pager"
+          ? "Fill at least one card or short-news row first."
+          : "Add at least one chapter first."
+      );
     setBusy("draft");
     try {
       setDrafted(await draft(payload));
@@ -127,9 +138,32 @@ export default function App() {
               Showing generated text. Editing any field clears it and you can generate again.
             </div>
           )}
+          <fieldset>
+            <legend>Layout</legend>
+            <div className="seg" role="group" aria-label="Layout">
+              {LAYOUTS.map((l) => (
+                <button
+                  key={l.v}
+                  type="button"
+                  aria-pressed={state.layout === l.v}
+                  onClick={() => patch({ layout: l.v })}
+                >
+                  {l.label}
+                </button>
+              ))}
+            </div>
+            <span className="hint">
+              {LAYOUTS.find((l) => l.v === state.layout)?.hint}
+            </span>
+          </fieldset>
+
           <Masthead state={state} patch={patch} />
           <StylePanel style={state.style} patch={patch} />
-          <Chapters chapters={state.chapters} patch={patch} notify={notify} />
+          {state.layout === "one_pager" ? (
+            <OnePager state={state} patch={patch} />
+          ) : (
+            <Chapters chapters={state.chapters} patch={patch} notify={notify} />
+          )}
           <fieldset>
             <legend>Payload sent to the backend</legend>
             <pre className="json">{JSON.stringify(payload, null, 2)}</pre>
