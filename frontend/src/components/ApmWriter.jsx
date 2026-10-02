@@ -5,8 +5,9 @@ import rosie from "../assets/rosie.jpg";
 /*
  * Rosie for Editors: notes in, APM-conformant manual text out.
  *
- * Rosie runs as its own server (the apm/ folder of this repo), with the manual
- * store and the APM ruleset. This page only talks to it. VITE_APM_API_BASE
+ * Rosie runs as its own server (the apm/ folder of this repo) with the APM
+ * ruleset. She works from the editor's notes only: no manuals are stored or
+ * searched. This page only talks to that server. VITE_APM_API_BASE
  * names that server; it defaults to the Railway service Rosie already runs on.
  */
 const BASE = (import.meta.env.VITE_APM_API_BASE || "https://web-production-7fe7be.up.railway.app")
@@ -90,7 +91,7 @@ function Writer({ notify }) {
     target: "html",
   });
   const [busy, setBusy] = useState(false);
-  const [res, setRes] = useState(null); // {draft, violations, iterations, sources, target}
+  const [res, setRes] = useState(null); // {draft, violations, iterations, target}
   const [copied, setCopied] = useState(false);
   const set = (k) => (v) => setOpts((o) => ({ ...o, [k]: v }));
 
@@ -168,8 +169,8 @@ function Writer({ notify }) {
             <img src={rosie} alt="" />
             <p>
               Write your notes on the left and press <b>Generate text</b>. Rosie writes the
-              manual text, checks it against the APM rules, and shows here what still needs
-              your eye.
+              manual text from your notes alone, checks it against the APM rules, and shows
+              here what still needs your eye.
             </p>
           </div>
         ) : (
@@ -236,22 +237,6 @@ function Writer({ notify }) {
               )}
             </div>
 
-            {res.sources?.length > 0 && (
-              <div className="apm-card">
-                <div className="apm-cardhead">
-                  <b>Manual passages used</b>
-                  <span className="hint">{res.sources.length}</span>
-                </div>
-                <ul className="apm-sources">
-                  {res.sources.map((s, i) => (
-                    <li key={i}>
-                      <div className="apm-cite">{s.citation}</div>
-                      <div className="apm-snip">{(s.content || "").slice(0, 200)}&hellip;</div>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
           </>
         )}
       </aside>
@@ -259,209 +244,9 @@ function Writer({ notify }) {
   );
 }
 
-// ---------- manuals ----------
-
-const PART = 4 * 1024 * 1024; // the upload is sent in parts to stay under proxy limits
-
-function Manuals({ notify }) {
-  const [list, setList] = useState(null);
-  const [form, setForm] = useState({ manual_name: "", revision: "", full_title: "", revision_date: "" });
-  const [file, setFile] = useState(null);
-  const [progress, setProgress] = useState(null); // {pct, message, state}
-  const fileRef = useRef(null);
-  const busy = progress?.state === "busy";
-
-  const load = () =>
-    call("/manuals")
-      .then((d) => setList(Array.isArray(d) ? d : []))
-      .catch((e) => {
-        setList([]);
-        notify(e.message);
-      });
-
-  useEffect(() => {
-    load();
-  }, []);
-
-  const poll = (job) =>
-    new Promise((resolve, reject) => {
-      const t = setInterval(async () => {
-        try {
-          const d = await call(`/ingest-status/${job}`);
-          if (d.status === "not_found") {
-            clearInterval(t);
-            reject(new Error("The upload was lost on the server. Please try again."));
-          } else if (d.status === "error") {
-            clearInterval(t);
-            reject(new Error(d.message || d.error || "Reading the manual failed."));
-          } else if (d.status === "done") {
-            clearInterval(t);
-            resolve(d.result);
-          } else {
-            setProgress({
-              pct: 30 + Math.round((d.progress || 0) * 0.7),
-              message: d.message || "Processing…",
-              state: "busy",
-            });
-          }
-        } catch {
-          /* a network blip: keep polling */
-        }
-      }, 1500);
-    });
-
-  const upload = async () => {
-    if (!file || !form.manual_name.trim()) return notify("Choose a PDF and give the manual a name.");
-    const id = Math.random().toString(36).slice(2, 10);
-    const parts = Math.max(1, Math.ceil(file.size / PART));
-    const mb = (file.size / 1024 / 1024).toFixed(1);
-    try {
-      for (let i = 0; i < parts; i++) {
-        setProgress({
-          pct: Math.round(2 + (i / parts) * 28),
-          message: `Uploading ${mb} MB (part ${i + 1} of ${parts})`,
-          state: "busy",
-        });
-        const fd = new FormData();
-        fd.append("file", new File([file.slice(i * PART, (i + 1) * PART)], file.name));
-        fd.append("upload_id", id);
-        fd.append("chunk_index", i);
-        fd.append("total_chunks", parts);
-        fd.append("filename", file.name);
-        await call("/upload-chunk", { method: "POST", body: fd });
-      }
-      setProgress({ pct: 30, message: "Uploaded. Reading the manual…", state: "busy" });
-      const fd = new FormData();
-      for (const [k, val] of Object.entries(form)) fd.append(k, val.trim());
-      fd.append("upload_id", id);
-      const start = await call("/ingest-assembled", { method: "POST", body: fd });
-      if (start.error) throw new Error(start.error);
-      const r = await poll(start.job_id);
-      setProgress({
-        pct: 100,
-        message: `${r?.manual_name || form.manual_name} is in: ${r?.chunks ?? "?"} passages stored.`,
-        state: "ok",
-      });
-      setFile(null);
-      if (fileRef.current) fileRef.current.value = "";
-      load();
-    } catch (e) {
-      setProgress({ pct: 0, message: e.message, state: "error" });
-    }
-  };
-
-  const remove = async (m) => {
-    const label = m.manual_name + (m.revision ? " rev " + m.revision : "");
-    if (!window.confirm(`Delete ${label}?\nRosie will no longer know its content. This cannot be undone.`)) return;
-    try {
-      const d = await postJSON("/delete-manual", { manual_name: m.manual_name, revision: m.revision || null });
-      if (d.error) throw new Error(d.error);
-      notify(`Deleted ${label}.`);
-      load();
-    } catch (e) {
-      notify("Delete failed: " + e.message);
-    }
-  };
-
-  const f = (k, label, ph) => (
-    <label className="f">
-      <span>{label}</span>
-      <input
-        type="text"
-        value={form[k]}
-        placeholder={ph}
-        onChange={(e) => setForm((x) => ({ ...x, [k]: e.target.value }))}
-      />
-    </label>
-  );
-
-  return (
-    <div className="apm-manuals">
-      <fieldset>
-        <legend>Add a manual</legend>
-        <p className="hint mb10">
-          Rosie reads the PDF and stores it in passages, so her drafts match what the manuals
-          already say. Uploading a new revision of a manual replaces that revision.
-        </p>
-        <div className="grid g2">
-          {f("manual_name", "Manual", "e.g. OM-A")}
-          {f("revision", "Revision", "e.g. 01/19")}
-          {f("full_title", "Full title", "e.g. Operations Manual Part A")}
-          {f("revision_date", "Revision date", "e.g. 06.01.2026")}
-        </div>
-        <div className="apm-uprow">
-          <input
-            ref={fileRef}
-            type="file"
-            accept=".pdf,application/pdf"
-            aria-label="PDF file"
-            onChange={(e) => setFile(e.target.files?.[0] || null)}
-          />
-          <button className="btn primary" onClick={upload} disabled={busy}>
-            {busy ? "Working…" : "Upload and read"}
-          </button>
-        </div>
-        {progress && (
-          <div className={"apm-progress " + progress.state}>
-            <div>{progress.message}</div>
-            {progress.state === "busy" && (
-              <div className="apm-bar">
-                <div style={{ width: progress.pct + "%" }} />
-              </div>
-            )}
-          </div>
-        )}
-      </fieldset>
-
-      <fieldset>
-        <legend>Manuals Rosie knows</legend>
-        {list === null ? (
-          <p className="hint">Loading&hellip;</p>
-        ) : list.length === 0 ? (
-          <p className="hint">No manuals yet, or Rosie's manual store is not connected.</p>
-        ) : (
-          <table className="apm-table">
-            <thead>
-              <tr>
-                <th>Manual</th>
-                <th>Full title</th>
-                <th>Revision</th>
-                <th>Rev. date</th>
-                <th>Passages</th>
-                <th>Uploaded</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {list.map((m) => (
-                <tr key={m.manual_name + (m.revision || "")}>
-                  <td>
-                    <b>{m.manual_name}</b>
-                  </td>
-                  <td>{m.full_title || "—"}</td>
-                  <td>{m.revision || "—"}</td>
-                  <td>{m.revision_date || "—"}</td>
-                  <td>{m.chunk_count}</td>
-                  <td>{m.uploaded_at ? new Date(m.uploaded_at).toLocaleDateString("de-CH") : "—"}</td>
-                  <td>
-                    <button className="btn link" onClick={() => remove(m)}>
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </fieldset>
-    </div>
-  );
-}
-
 // ---------- page ----------
 
 export default function ApmWriter() {
-  const [tab, setTab] = useState("write");
   const [health, setHealth] = useState("");
   const [msg, setMsg] = useState("");
   const timer = useRef(null);
@@ -473,7 +258,7 @@ export default function ApmWriter() {
 
   useEffect(() => {
     call("/health")
-      .then((d) => setHealth(`${d.rules} APM rules${d.retrieval ? " · manuals connected" : ""}`))
+      .then((d) => setHealth(`${d.rules} APM rules`))
       .catch(() => setHealth("Rosie's server is offline"));
   }, []);
 
@@ -488,20 +273,8 @@ export default function ApmWriter() {
         <span className="sub">APM-conformant manual content</span>
         <span className="spacer" />
         <span className="sub">{health}</span>
-        <div className="seg apm-tabs" role="group" aria-label="Section">
-          <button type="button" aria-pressed={tab === "write"} onClick={() => setTab("write")}>
-            Write
-          </button>
-          <button type="button" aria-pressed={tab === "manuals"} onClick={() => setTab("manuals")}>
-            Manuals
-          </button>
-        </div>
       </header>
-      {/* Both stay mounted so notes and drafts survive a look at the manuals. */}
-      <div hidden={tab !== "write"} className="page-fill">
-        <Writer notify={notify} />
-      </div>
-      <div hidden={tab !== "manuals"}>{tab === "manuals" && <Manuals notify={notify} />}</div>
+      <Writer notify={notify} />
       <div className={"toast" + (msg ? " on" : "")}>{msg}</div>
     </>
   );

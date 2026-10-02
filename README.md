@@ -10,7 +10,7 @@ change how documents look, edit that file in Word — no code changes.
 ```
 frontend/   React + Vite. Start page, Newsletter Builder, and the Rosie for Editors page.
 backend/    FastAPI. Newsletter prompts, providers, .docx rendering.
-apm/        Rosie for Editors' own server (APM ruleset, checker, manual store).
+apm/        Rosie for Editors' own server (APM ruleset and checker; no manuals stored).
 ```
 
 The website opens on a start page with two choices: **Write manual content**

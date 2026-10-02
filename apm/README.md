@@ -9,6 +9,12 @@
 > page `#/apm`), which calls this server. Its address is set in Vercel as
 > `VITE_APM_API_BASE`; without it the site uses the current Railway URL.
 > The page this server still serves at `/` keeps working as before.
+>
+> **No manuals.** Publishing whole or partial manuals in Rosie is not allowed
+> for now, so the manual store (PDF upload, Supabase, Voyage search) was
+> removed on 2 October 2026. Rosie works from the editor's notes and the 84
+> APM rules only. `VOYAGE_API_KEY`, `SUPABASE_URL` and `SUPABASE_KEY` are no
+> longer used.
 
 Editors enter rough notes → the tool generates style-compliant manual content,
 verified against all 84 rules from APM chapters 1 and 3.2.

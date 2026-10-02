@@ -263,8 +263,7 @@ def load_rules(path: str = "APM_rules.json") -> list:
 def build_system_prompt(rules: list, include_process: bool = False,
                         target: str = "html",
                         structure: str = None, tone: str = None,
-                        audience: str = None, length: str = None,
-                        context: str = "") -> str:
+                        audience: str = None, length: str = None) -> str:
     groups: dict = {}
     for r in rules:
         if r["category"] == "process" and not include_process:
@@ -277,11 +276,6 @@ def build_system_prompt(rules: list, include_process: bool = False,
     style_block = build_style_block(structure, tone, audience, length)
     if style_block:
         lines.append(style_block)
-
-    # Retrieved manual passages — grounding context
-    if context:
-        lines.append("\n\nRelevant manual passages (verbatim):")
-        lines.append(context)
 
     for cat in CATEGORY_ORDER:
         if cat not in groups:
