@@ -1,4 +1,4 @@
-import { GrowText } from "./Bits.jsx";
+import { FlagNotes, GrowText, flagCls, unflag } from "./Bits.jsx";
 import ReviseBar from "./DraftTools.jsx";
 import IconButton from "./IconButton.jsx";
 import {
@@ -33,8 +33,16 @@ function Notes({ value, onChange, ariaLabel }) {
   );
 }
 
+const CARD_FLAGS = { title: "Title", subtitle: "Subtitle", icon: "Icon", text: "Text" };
+const NEWS_FLAGS = { label: "Label", icon: "Icon", text: "Text" };
+
+/** Changing a field settles any import note on it. */
+const setter = (x, onChange) => (k, v) =>
+  onChange({ ...x, [k]: v, flags: unflag(x.flags, k === "draft" ? "text" : k) });
+
 function Card({ card, index, activeCards, activeNews, ctx, onChange, onClear }) {
-  const set = (k, v) => onChange({ ...card, [k]: v });
+  const set = setter(card, onChange);
+  const flags = card.flags;
   const limit = cardLimit(index, Math.max(activeCards, 1), activeNews);
   const filled = cardFilled(card);
   const full = filled && isFullWidth(index, activeCards);
@@ -46,11 +54,13 @@ function Card({ card, index, activeCards, activeNews, ctx, onChange, onClear }) 
     <div className={"ed-cardslot" + (full ? " full" : "") + (filled ? "" : " unused")}>
       <div className={"ed-card" + (drafted ? " drafted" : "")}>
         <div className="ed-cardhead">
-          <IconButton value={card.icon} onChange={(v) => set("icon", v)} size={30} />
+          <span className={"flagwrap" + flagCls(flags, "icon")}>
+            <IconButton value={card.icon} onChange={(v) => set("icon", v)} size={30} />
+          </span>
           <div className="ed-cardtitles">
             <input
               type="text"
-              className="inline-field ed-cardtitle"
+              className={"inline-field ed-cardtitle" + flagCls(flags, "title")}
               placeholder={name + " title"}
               aria-label={name + " title"}
               value={card.title}
@@ -58,7 +68,7 @@ function Card({ card, index, activeCards, activeNews, ctx, onChange, onClear }) 
             />
             <input
               type="text"
-              className="inline-field ed-cardsub"
+              className={"inline-field ed-cardsub" + flagCls(flags, "subtitle")}
               placeholder="Subtitle (optional)"
               aria-label={name + " subtitle"}
               value={card.subtitle}
@@ -68,14 +78,14 @@ function Card({ card, index, activeCards, activeNews, ctx, onChange, onClear }) 
         </div>
         {drafted ? (
           <GrowText
-            className="ed-cardbody"
+            className={"ed-cardbody" + flagCls(flags, "text")}
             value={card.draft}
             onChange={(v) => set("draft", v)}
             ariaLabel={name + " generated text"}
           />
         ) : (
           <GrowText
-            className="ed-cardbody"
+            className={"ed-cardbody" + flagCls(flags, "text")}
             value={card.text}
             onChange={(v) => set("text", v)}
             placeholder={copy.placeholder}
@@ -83,6 +93,11 @@ function Card({ card, index, activeCards, activeNews, ctx, onChange, onClear }) 
           />
         )}
       </div>
+      <FlagNotes
+        flags={flags}
+        labels={CARD_FLAGS}
+        onDismiss={(k) => onChange({ ...card, flags: unflag(flags, k) })}
+      />
       <div className="ed-tools">
         {drafted ? (
           <Notes value={card.text} onChange={(v) => set("text", v)} ariaLabel={name + " notes"} />
@@ -126,17 +141,25 @@ function Card({ card, index, activeCards, activeNews, ctx, onChange, onClear }) 
 }
 
 function NewsRow({ item, index, limit, ctx, onChange, onClear }) {
-  const set = (k, v) => onChange({ ...item, [k]: v });
+  const set = setter(item, onChange);
+  const flags = item.flags;
   const filled = newsFilled(item);
   const drafted = hasDraft(item);
   const name = "Short news " + (index + 1);
   return (
     <div className={"ed-newsslot" + (filled ? "" : " unused")}>
+      <FlagNotes
+        flags={flags}
+        labels={NEWS_FLAGS}
+        onDismiss={(k) => onChange({ ...item, flags: unflag(flags, k) })}
+      />
       <div className={"ed-newsrow" + (drafted ? " drafted" : "")}>
         <div className="ed-newslabel">
-          <IconButton value={item.icon} onChange={(v) => set("icon", v)} size={26} />
+          <span className={"flagwrap" + flagCls(flags, "icon")}>
+            <IconButton value={item.icon} onChange={(v) => set("icon", v)} size={26} />
+          </span>
           <GrowText
-            className="ed-newslabeltext"
+            className={"ed-newslabeltext" + flagCls(flags, "label")}
             value={item.label}
             onChange={(v) => set("label", v.replace(/\n/g, " "))}
             placeholder={name}
@@ -145,14 +168,14 @@ function NewsRow({ item, index, limit, ctx, onChange, onClear }) {
         </div>
         {drafted ? (
           <GrowText
-            className="ed-newstext"
+            className={"ed-newstext" + flagCls(flags, "text")}
             value={item.draft}
             onChange={(v) => set("draft", v)}
             ariaLabel={name + " generated text"}
           />
         ) : (
           <GrowText
-            className="ed-newstext"
+            className={"ed-newstext" + flagCls(flags, "text")}
             value={item.text}
             onChange={(v) => set("text", v)}
             placeholder="Two or three short lines."
@@ -226,7 +249,7 @@ export default function OnePager({ state, patch, notify }) {
             ctx={ctx}
             onChange={(nc) => setCard(i, nc)}
             onClear={() =>
-              setCard(i, { ...c, title: "", subtitle: "", text: "", draft: null, draftFrom: "" })
+              setCard(i, { ...c, title: "", subtitle: "", text: "", draft: null, draftFrom: "", flags: {} })
             }
           />
         ))}
@@ -250,7 +273,7 @@ export default function OnePager({ state, patch, notify }) {
             limit={b.news}
             ctx={ctx}
             onChange={(nn) => setNews(i, nn)}
-            onClear={() => setNews(i, { ...n, label: "", text: "", draft: null, draftFrom: "" })}
+            onClear={() => setNews(i, { ...n, label: "", text: "", draft: null, draftFrom: "", flags: {} })}
           />
         ))}
         </div>

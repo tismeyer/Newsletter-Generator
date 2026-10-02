@@ -53,3 +53,6 @@ export async function renderDocument(payload) {
   URL.revokeObjectURL(url);
   return name;
 }
+
+/** Send a Word file to be restructured into our layouts. Text is copied, not rewritten. */
+export const importWord = async (body) => (await post("/api/import", body)).json();

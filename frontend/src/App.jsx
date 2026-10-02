@@ -5,6 +5,7 @@ import Chapters from "./components/Chapters.jsx";
 import OnePager from "./components/OnePager.jsx";
 import Preview from "./components/Preview.jsx";
 import Drafts from "./components/Drafts.jsx";
+import ImportWord, { ImportBanner } from "./components/ImportWord.jsx";
 import { LAYOUTS, applyDrafts, emptyState, pendingDrafts, toPayload } from "./model.js";
 import { draft, getProviders, renderDocument } from "./api.js";
 
@@ -111,6 +112,7 @@ export default function App() {
               </option>
             ))}
           </select>
+          <ImportWord state={state} load={setState} notify={notify} busy={busy} setBusy={setBusy} />
           <Drafts state={state} load={setState} notify={notify} />
           <button className="btn go small" onClick={onDraft} disabled={Boolean(busy)}>
             {busy === "draft" ? "Writing\u2026" : "Generate text"}
@@ -123,6 +125,7 @@ export default function App() {
 
       <div className="split">
         <div className="editor">
+          <ImportBanner state={state} patch={patch} />
           <fieldset>
             <legend>Layout</legend>
             <div className="seg" role="group" aria-label="Layout">

@@ -14,7 +14,7 @@ class ClaudeProvider(Provider):
     def __init__(self) -> None:
         if not settings.anthropic_api_key:
             raise GenerationError("ANTHROPIC_API_KEY is not set.")
-        self._client = httpx.AsyncClient(timeout=90)
+        self._client = httpx.AsyncClient(timeout=180)  # a long Word import takes a while
 
     async def complete(self, system: str, prompt: str, max_tokens: int = 1200) -> str:
         try:

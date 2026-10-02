@@ -105,6 +105,7 @@ those.
 | GET    | `/api/budget`   | character allowances for the one-page layout    |
 | POST   | `/api/draft`    | generate text, return it for review             |
 | POST   | `/api/revise`   | amend one generated box as the editor asks      |
+| POST   | `/api/import`   | map an existing Word file onto a layout         |
 | POST   | `/api/render`   | build the `.docx` from reviewed text            |
 | POST   | `/api/document` | draft and build in one call                     |
 
@@ -118,6 +119,19 @@ to their notes. **Generate text** only writes boxes that have no text yet, and
 **Create document** sends existing text as `verbatim`, so nothing an editor has
 approved is rewritten. In chapters, generated highlight boxes appear in the text
 as `[ACTION] Title: text` and `[INFO] Title: text` lines.
+
+### Word import
+
+**Import Word** takes any `.docx` (up to 15 MB, sent as base64 JSON). The
+server first reads the document without any model (`app/importer.py`,
+`outline()`): every paragraph and table cell in order, with style, heading
+level, size, bold, caps, bullet and shaded-box clues. The AI then maps that
+outline onto the masthead and onto chapters, or cards and short news, and picks
+icons. Text is copied as written and arrives as finished text with "Keep
+exactly as is"; pictures are left out. The editor picks the layout or lets the
+AI suggest one (it says why). Wherever the AI guessed, it returns a flag; the
+field gets a yellow outline and a note, which disappears on **OK** or when the
+field is edited. Importing needs an AI provider.
 
 ## Deploying
 

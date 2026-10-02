@@ -1,7 +1,16 @@
 import { useEffect, useRef, useState } from "react";
 import { DOC_TYPES, KICKERS, departmentFrom, fmtDate } from "../model.js";
+import { FlagNotes, flagCls, unflag } from "./Bits.jsx";
 import logo from "../assets/logo.png";
 import icon from "../assets/icon.png";
+
+const MAST_FLAGS = {
+  header_kicker: "Publication name",
+  doc_type: "Document type",
+  doc_issue: "Issue",
+  doc_headline: "Headline",
+  publication_date: "Date",
+};
 
 const REVISIONS = Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, "0"));
 
@@ -83,12 +92,14 @@ function PickButton({ options, value, onPick, label }) {
 
 export default function Masthead({ state, patch }) {
   const m = state.masthead;
-  const set = (k, v) => patch({ masthead: { ...m, [k]: v } });
+  const flags = state.mastheadFlags;
+  const set = (k, v) => patch({ masthead: { ...m, [k]: v }, mastheadFlags: unflag(flags, k) });
+  const fc = (k) => flagCls(flags, k);
 
   const setKicker = (v) => {
     const next = { ...m, header_kicker: v };
     if (!state.issuedByTouched) next.footer_issued_by = departmentFrom(v);
-    patch({ masthead: next });
+    patch({ masthead: next, mastheadFlags: unflag(flags, "header_kicker") });
   };
 
   const setIssuedBy = (v) =>
@@ -109,7 +120,7 @@ export default function Masthead({ state, patch }) {
         <div className="mast-top">
           <img className="mast-icon" src={icon} alt="" />
           <Inline
-            className="mast-kicker"
+            className={"mast-kicker" + fc("header_kicker")}
             caps
             value={m.header_kicker}
             onChange={setKicker}
@@ -129,7 +140,7 @@ export default function Masthead({ state, patch }) {
 
         <div className="mast-title">
           <Inline
-            className="t-type"
+            className={"t-type" + fc("doc_type")}
             value={m.doc_type}
             onChange={(v) => set("doc_type", v)}
             placeholder="Newsletter"
@@ -144,7 +155,7 @@ export default function Masthead({ state, patch }) {
           />
           <span className="t-dash">&ndash;</span>
           <Inline
-            className="t-issue"
+            className={"t-issue" + fc("doc_issue")}
             value={m.doc_issue}
             onChange={(v) => set("doc_issue", v)}
             placeholder="10 2026"
@@ -154,7 +165,7 @@ export default function Masthead({ state, patch }) {
         </div>
 
         <Inline
-          className="mast-headline"
+          className={"mast-headline" + fc("doc_headline")}
           value={m.doc_headline}
           onChange={(v) => set("doc_headline", v)}
           placeholder="Headline for this edition"
@@ -162,7 +173,7 @@ export default function Masthead({ state, patch }) {
           min={28}
         />
 
-        <div className="mast-daterow">
+        <div className={"mast-daterow" + fc("publication_date")}>
           <span className="mast-date">{fmtDate(m.publication_date)}</span>
           <input
             type="date"
@@ -205,6 +216,12 @@ export default function Masthead({ state, patch }) {
           <span className="f-page">Page 1 of 1</span>
         </div>
       </div>
+
+      <FlagNotes
+        flags={flags}
+        labels={MAST_FLAGS}
+        onDismiss={(k) => patch({ mastheadFlags: unflag(flags, k) })}
+      />
 
       {state.issuedByTouched && (
         <span className="hint">

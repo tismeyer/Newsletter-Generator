@@ -114,3 +114,36 @@ export function useDismiss(open, setOpen) {
   }, [open, setOpen]);
   return ref;
 }
+
+// ---------- import flags ----------
+// Where a Word import had to guess, the field gets a yellow outline and a note.
+
+export const flagCls = (flags, k) => (flags && flags[k] ? " flagged" : "");
+
+export function unflag(flags, k) {
+  if (!flags || !flags[k]) return flags;
+  const { [k]: _, ...rest } = flags;
+  return rest;
+}
+
+export function FlagNotes({ flags, labels, onDismiss }) {
+  const keys = Object.keys(flags || {});
+  if (!keys.length) return null;
+  return (
+    <ul className="flagnotes">
+      {keys.map((k) => (
+        <li key={k}>
+          <span className="fn-where">{labels[k] || k}:</span> {flags[k]}
+          <button
+            type="button"
+            className="fn-ok"
+            title="Checked: hide this note"
+            onClick={() => onDismiss(k)}
+          >
+            OK
+          </button>
+        </li>
+      ))}
+    </ul>
+  );
+}

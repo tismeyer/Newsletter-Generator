@@ -142,6 +142,9 @@ export const emptyState = () => ({
   cards: [newCard("warn"), newCard("star"), newCard("gear"), newCard("info")],
   news: [newNews("smile"), newNews("heart"), newNews("check")],
   provider: "claude",
+  // Set by a Word import: what came in, and where the AI was unsure.
+  importInfo: null,
+  mastheadFlags: {},
 });
 
 // ---------- generated text ----------
@@ -362,3 +365,68 @@ export function onePagerSize(s) {
     (hasDraft(n) ? n.draft : n.text).split("\n").map((l) => l.trim()).filter(Boolean);
   return fitSize(s.cards.filter(cardFilled).map(cardParagraphs), s.news.filter(newsFilled).map(lines));
 }
+
+// ---------- Word import ----------
+//
+// /api/import answers with the document mapped onto our layouts, plus "flags"
+// where the AI had to guess. Imported text is finished text, so it lands as each
+// box's draft (editable in place, revisable) with "Keep exactly as is" behind it.
+// Flags are kept on the item they concern, keyed by field, and disappear when
+// the editor changes that field or clicks them away.
+
+export function fromImport(res, prev, file, chosen) {
+  const itemFlags = {};
+  const mastheadFlags = {};
+  const notes = [];
+  for (const f of res.flags || []) {
+    const [area, idx, field] = String(f.where || "").split(".");
+    if (area === "masthead" && idx) mastheadFlags[idx] = f.note;
+    else if (["chapters", "cards", "news"].includes(area) && /^\d+$/.test(idx || "") && field)
+      (itemFlags[area + "." + idx] ??= {})[field === "boxes" ? "text" : field] = f.note;
+    else notes.push(f.note);
+  }
+  const finished = (x, text, key) => ({
+    ...x, text, treatment: "verbatim", draft: text, draftFrom: text, flags: itemFlags[key] || {},
+  });
+
+  const base = emptyState();
+  const m = Object.fromEntries(Object.entries(res.masthead || {}).filter(([, v]) => v));
+  const layout = res.layout === "one_pager" ? "one_pager" : "standard";
+  const s = {
+    ...base,
+    style: prev.style,
+    provider: prev.provider,
+    layout,
+    masthead: { ...base.masthead, ...m },
+    mastheadFlags,
+    importInfo: { file, chosen, layout, reason: res.layout_reason || "", notes },
+  };
+  s.masthead.footer_issued_by = departmentFrom(s.masthead.header_kicker);
+
+  if (layout === "standard") {
+    const ch = (res.chapters || []).slice(0, MAX_CHAPTERS);
+    if (ch.length)
+      s.chapters = ch.map((c, i) =>
+        finished({ ...newChapter(c.heading, c.icon || ""), box_policy: "none" }, c.text, "chapters." + i)
+      );
+  } else {
+    const cards = (res.cards || []).slice(0, 4);
+    s.cards = base.cards.map((d, i) =>
+      cards[i]
+        ? finished({ ...d, icon: cards[i].icon || d.icon, title: cards[i].title, subtitle: cards[i].subtitle }, cards[i].text, "cards." + i)
+        : d
+    );
+    const news = (res.news || []).slice(0, 3);
+    s.news = base.news.map((d, i) =>
+      news[i]
+        ? finished({ ...d, icon: news[i].icon || d.icon, label: news[i].label }, news[i].text, "news." + i)
+        : d
+    );
+  }
+  return s;
+}
+
+/** How many yellow notes are still open. */
+export const openFlags = (s) =>
+  Object.keys(s.mastheadFlags || {}).length +
+  [...s.chapters, ...s.cards, ...s.news].reduce((n, x) => n + Object.keys(x.flags || {}).length, 0);

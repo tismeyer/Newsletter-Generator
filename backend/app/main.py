@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import base64
+import binascii
 import logging
 
 from fastapi import FastAPI, HTTPException
@@ -9,6 +11,7 @@ from fastapi.responses import Response
 from .config import settings
 from .budget import budget as compute_budget
 from .generate import build_draft, build_one_pager, revise as revise_box
+from .importer import map_document
 from .providers import GenerationError, available, get_provider
 from .render.onepager import render_one_pager
 from .render.renderer import filename_for, render_document
@@ -17,6 +20,7 @@ from .schemas import (
     DraftResponse,
     Layout,
     RenderRequest,
+    ImportRequest,
     ReviseRequest,
     ReviseResponse,
 )
@@ -88,6 +92,34 @@ async def revise(req: ReviseRequest) -> ReviseResponse:
     finally:
         await provider.aclose()
     return ReviseResponse(text=text, provider_used=used)
+
+
+MAX_IMPORT_BYTES = 15 * 1024 * 1024
+
+
+@app.post("/api/import")
+async def import_word(req: ImportRequest) -> dict:
+    """Restructure an existing Word document into this app's layouts.
+
+    Text is copied, not rewritten; anything the model had to guess comes back
+    in `flags` for the editor to check."""
+    try:
+        data = base64.b64decode(req.data_base64, validate=True)
+    except (binascii.Error, ValueError) as e:
+        raise HTTPException(status_code=400, detail="The file did not arrive intact.") from e
+    if len(data) > MAX_IMPORT_BYTES:
+        raise HTTPException(status_code=413, detail="That file is larger than 15 MB.")
+    try:
+        provider = get_provider(req.provider)
+    except GenerationError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    try:
+        result, count = await map_document(data, req.layout, provider, req.icons, req.kickers)
+    except GenerationError as e:
+        raise HTTPException(status_code=502, detail=str(e)) from e
+    finally:
+        await provider.aclose()
+    return {**result.model_dump(), "elements": count}
 
 
 @app.post("/api/render")

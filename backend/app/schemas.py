@@ -249,3 +249,14 @@ class ReviseRequest(BaseModel):
 class ReviseResponse(BaseModel):
     text: str
     provider_used: str
+
+
+class ImportRequest(BaseModel):
+    """A Word document to restructure, sent as base64 so no upload library is needed."""
+
+    provider: str | None = None
+    filename: str = ""
+    data_base64: str
+    layout: Literal["auto", "standard", "one_pager"] = "auto"
+    icons: list[dict] = Field(default_factory=list)    # [{v, label}] as the form shows them
+    kickers: list[str] = Field(default_factory=list)   # usual publication names

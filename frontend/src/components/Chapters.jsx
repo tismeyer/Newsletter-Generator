@@ -1,4 +1,4 @@
-import { GrowText } from "./Bits.jsx";
+import { FlagNotes, GrowText, flagCls, unflag } from "./Bits.jsx";
 import ReviseBar from "./DraftTools.jsx";
 import IconButton from "./IconButton.jsx";
 import {
@@ -54,12 +54,12 @@ function BoxEditor({ box, onChange, onRemove }) {
  * Generated chapter text, shown the way it prints: text runs, and the red and
  * blue boxes as boxes. Every edit is written back into the one draft string.
  */
-function DraftEditor({ draft, onChange, ariaLabel }) {
+function DraftEditor({ draft, onChange, ariaLabel, className = "" }) {
   const segs = draftSegments(draft);
   const put = (i, seg) => onChange(segmentsToText(segs.map((g, j) => (j === i ? seg : g))));
   const drop = (i) => onChange(segmentsToText(segs.filter((_, j) => j !== i)));
   return (
-    <div className="ed-drafted">
+    <div className={"ed-drafted" + className}>
       {segs.map((g, i) =>
         g.kind === "text" ? (
           <GrowText
@@ -82,8 +82,13 @@ function DraftEditor({ draft, onChange, ariaLabel }) {
   );
 }
 
+const FLAG_LABELS = { heading: "Title", icon: "Icon", text: "Text" };
+
 function Chapter({ chapter, index, ctx, onChange, onRemove }) {
-  const set = (k, v) => onChange({ ...chapter, [k]: v });
+  // Changing a field settles any import note on it.
+  const set = (k, v) =>
+    onChange({ ...chapter, [k]: v, flags: unflag(chapter.flags, k === "draft" ? "text" : k) });
+  const flags = chapter.flags;
   const copy = TREATMENT_COPY[chapter.treatment];
   const locked = chapter.treatment === "verbatim";
   const drafted = hasDraft(chapter);
@@ -96,16 +101,23 @@ function Chapter({ chapter, index, ctx, onChange, onRemove }) {
 
   return (
     <section className="ed-chapter">
+      <FlagNotes
+        flags={flags}
+        labels={FLAG_LABELS}
+        onDismiss={(k) => onChange({ ...chapter, flags: unflag(flags, k) })}
+      />
       <div className="ed-h1row">
-        <IconButton
-          value={chapter.icon || ""}
-          onChange={(v) => set("icon", v)}
-          size={28}
-          allowNone
-        />
+        <span className={"flagwrap" + flagCls(flags, "icon")}>
+          <IconButton
+            value={chapter.icon || ""}
+            onChange={(v) => set("icon", v)}
+            size={28}
+            allowNone
+          />
+        </span>
         <input
           type="text"
-          className="inline-field ed-h1"
+          className={"inline-field ed-h1" + flagCls(flags, "heading")}
           placeholder={name + " title"}
           aria-label={name + " title"}
           value={chapter.heading}
@@ -118,11 +130,12 @@ function Chapter({ chapter, index, ctx, onChange, onRemove }) {
           draft={chapter.draft}
           onChange={(v) => set("draft", v)}
           ariaLabel={name + " generated text"}
+          className={flagCls(flags, "text")}
         />
       ) : (
         <>
           <GrowText
-            className="ed-body"
+            className={"ed-body" + flagCls(flags, "text")}
             value={chapter.text}
             onChange={(v) => set("text", v)}
             placeholder={copy.placeholder}
