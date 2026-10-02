@@ -95,3 +95,22 @@ export function GrowText({ value, onChange, placeholder, className, ariaLabel })
     />
   );
 }
+
+/** Closes a popover on an outside click or Escape. */
+export function useDismiss(open, setOpen) {
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!open) return;
+    const away = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
+    const esc = (e) => e.key === "Escape" && setOpen(false);
+    document.addEventListener("mousedown", away);
+    document.addEventListener("keydown", esc);
+    return () => {
+      document.removeEventListener("mousedown", away);
+      document.removeEventListener("keydown", esc);
+    };
+  }, [open, setOpen]);
+  return ref;
+}

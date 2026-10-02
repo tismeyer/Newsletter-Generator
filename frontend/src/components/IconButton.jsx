@@ -1,25 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
+import { useDismiss } from "./Bits.jsx";
 import { ICONS } from "../model.js";
 import { ICON_SRC } from "../icons.js";
-
-/** Closes a popover on an outside click or Escape. */
-function useDismiss(open, setOpen) {
-  const ref = useRef(null);
-  useEffect(() => {
-    if (!open) return;
-    const away = (e) => {
-      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
-    };
-    const esc = (e) => e.key === "Escape" && setOpen(false);
-    document.addEventListener("mousedown", away);
-    document.addEventListener("keydown", esc);
-    return () => {
-      document.removeEventListener("mousedown", away);
-      document.removeEventListener("keydown", esc);
-    };
-  }, [open, setOpen]);
-  return ref;
-}
 
 /**
  * The round icon exactly as it prints. Clicking it opens the full set to pick

@@ -4,10 +4,9 @@ import StylePanel from "./components/StylePanel.jsx";
 import Chapters from "./components/Chapters.jsx";
 import OnePager from "./components/OnePager.jsx";
 import Preview from "./components/Preview.jsx";
+import Drafts from "./components/Drafts.jsx";
 import { LAYOUTS, applyDrafts, emptyState, pendingDrafts, toPayload } from "./model.js";
 import { draft, getProviders, renderDocument } from "./api.js";
-
-const DRAFT_KEY = "nlb:draft";
 
 const PROVIDER_LABEL = {
   claude: "Claude",
@@ -92,26 +91,6 @@ export default function App() {
     }
   };
 
-  const saveDraft = () => {
-    try {
-      localStorage.setItem(DRAFT_KEY, JSON.stringify(state));
-      notify("Draft saved in this browser.");
-    } catch {
-      notify("This browser will not store the draft.");
-    }
-  };
-
-  const loadDraft = () => {
-    try {
-      const raw = localStorage.getItem(DRAFT_KEY);
-      if (!raw) return notify("No saved draft found.");
-      setState(JSON.parse(raw));
-      notify("Draft loaded.");
-    } catch {
-      notify("The saved draft could not be read.");
-    }
-  };
-
   const usable = Object.entries(providers.available).filter(([, ok]) => ok);
 
   return (
@@ -132,8 +111,7 @@ export default function App() {
               </option>
             ))}
           </select>
-          <button className="btn small" onClick={saveDraft}>Save draft</button>
-          <button className="btn small" onClick={loadDraft}>Load draft</button>
+          <Drafts state={state} load={setState} notify={notify} />
           <button className="btn go small" onClick={onDraft} disabled={Boolean(busy)}>
             {busy === "draft" ? "Writing\u2026" : "Generate text"}
           </button>
