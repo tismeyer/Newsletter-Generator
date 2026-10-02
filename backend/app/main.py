@@ -7,10 +7,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 
 from .config import settings
-from .generate import build_draft
+from .budget import budget as compute_budget
+from .generate import build_draft, build_one_pager
 from .providers import GenerationError, available, get_provider
+from .render.onepager import render_one_pager
 from .render.renderer import filename_for, render_document
-from .schemas import DocumentRequest, DraftResponse, RenderRequest
+from .schemas import DocumentRequest, DraftResponse, Layout, RenderRequest
 
 log = logging.getLogger("newsletter")
 app = FastAPI(title="Newsletter Builder", version="1.0")
@@ -36,6 +38,14 @@ async def providers() -> dict:
     return {"available": available(), "default": settings.default_provider}
 
 
+@app.get("/api/budget")
+async def budget(cards: int = 4, news: int = 3) -> dict:
+    """Character allowances for the one-page layout, given how many boxes are in
+    use. The frontend mirrors this calculation for the live counters; this
+    endpoint is the authority if the two ever disagree."""
+    return compute_budget(cards, news)
+
+
 @app.post("/api/draft", response_model=DraftResponse)
 async def draft(req: DocumentRequest) -> DraftResponse:
     """Generate the text and return it for review, without building the file."""
@@ -44,19 +54,27 @@ async def draft(req: DocumentRequest) -> DraftResponse:
     except GenerationError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     try:
+        if req.layout is Layout.ONE_PAGER:
+            cards, news = await build_one_pager(req, provider)
+            return DraftResponse(
+                masthead=req.masthead, layout=req.layout, cards=cards, news=news
+            )
         chapters = await build_draft(req, provider)
     except GenerationError as e:
         raise HTTPException(status_code=502, detail=str(e)) from e
     finally:
         await provider.aclose()
-    return DraftResponse(masthead=req.masthead, chapters=chapters)
+    return DraftResponse(masthead=req.masthead, layout=req.layout, chapters=chapters)
 
 
 @app.post("/api/render")
 async def render(req: RenderRequest) -> Response:
     """Build the .docx from reviewed text."""
     try:
-        data = render_document(req.masthead, req.chapters)
+        if req.layout is Layout.ONE_PAGER:
+            data = render_one_pager(req.masthead, req.cards, req.news)
+        else:
+            data = render_document(req.masthead, req.chapters)
     except Exception as e:  # noqa: BLE001 - surfaced to the editor as a message
         log.exception("render failed")
         raise HTTPException(status_code=500, detail="The document could not be built.") from e
@@ -72,4 +90,7 @@ async def render(req: RenderRequest) -> Response:
 async def document(req: DocumentRequest) -> Response:
     """Draft and build in one call, for editors who do not want the review step."""
     drafted = await draft(req)
-    return await render(RenderRequest(masthead=drafted.masthead, chapters=drafted.chapters))
+    return await render(RenderRequest(
+        masthead=drafted.masthead, layout=drafted.layout,
+        chapters=drafted.chapters, cards=drafted.cards, news=drafted.news,
+    ))

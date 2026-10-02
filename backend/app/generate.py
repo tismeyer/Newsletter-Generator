@@ -11,10 +11,14 @@ import re
 from .prompts import HOUSE_STYLE, box_prompt, chapter_prompt, effective_box_policy
 from .providers import GenerationError, Provider
 from .schemas import (
+    Card,
     Chapter,
     DocumentRequest,
+    NewsItem,
     RenderedBlock,
+    RenderedCard,
     RenderedChapter,
+    RenderedNews,
     StyleSpec,
     Treatment,
 )
@@ -103,3 +107,54 @@ async def build_draft(req: DocumentRequest, provider: Provider) -> list[Rendered
         raise GenerationError("Add at least one chapter with a heading or some text.")
     # Chapters are independent, so they are drafted concurrently.
     return list(await asyncio.gather(*[one(c) for c in usable]))
+
+
+# ---------- one-page layout ----------
+
+async def _box_text(provider: Provider, treatment: Treatment, text: str,
+                    heading: str, style: StyleSpec, limit: int) -> tuple[str, str]:
+    """Shared path for cards and news rows: verbatim bypasses the model."""
+    if treatment is Treatment.VERBATIM or not text.strip():
+        return text, "manual"
+    chapter = Chapter(heading=heading, treatment=treatment, text=text)
+    prompt = chapter_prompt(chapter, style, may_add_boxes=False)
+    if treatment is not Treatment.POLISH:
+        prompt += (
+            f"\n\nHard limit: the result must not exceed {limit} characters, "
+            "including spaces. This box is part of a single-page layout and "
+            "longer text will not fit."
+        )
+    out = await provider.complete(HOUSE_STYLE, prompt, max_tokens=900)
+    return out, provider.name
+
+
+async def build_one_pager(req: DocumentRequest, provider: Provider):
+    from .budget import budget as compute_budget, card_limit
+
+    cards = [c for c in req.cards if c.filled]
+    news = [n for n in req.news if n.filled]
+    if not cards and not news:
+        raise GenerationError("Fill at least one card or one short-news row.")
+
+    limits = compute_budget(len(cards), len(news))
+
+    async def one_card(index: int, card: Card) -> RenderedCard:
+        limit = card_limit(index, len(cards), len(news))
+        text, used = await _box_text(
+            provider, card.treatment, card.text, card.title, req.style, limit
+        )
+        return RenderedCard(
+            icon=card.icon, title=card.title, subtitle=card.subtitle,
+            blocks=text_to_blocks(text), provider_used=used,
+        )
+
+    async def one_news(item: NewsItem) -> RenderedNews:
+        text, used = await _box_text(
+            provider, item.treatment, item.text, item.label, req.style, limits["news"]
+        )
+        lines = [l.strip() for l in text.split("\n") if l.strip()]
+        return RenderedNews(icon=item.icon, label=item.label, lines=lines, provider_used=used)
+
+    rendered_cards = list(await asyncio.gather(*[one_card(i, c) for i, c in enumerate(cards)]))
+    rendered_news = list(await asyncio.gather(*[one_news(n) for n in news]))
+    return rendered_cards, rendered_news

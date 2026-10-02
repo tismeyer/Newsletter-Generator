@@ -11,7 +11,7 @@ class Settings:
 
     # Anthropic
     anthropic_api_key: str | None = os.getenv("ANTHROPIC_API_KEY")
-    anthropic_model: str = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-6")
+    anthropic_model: str = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-5")
 
     # Microsoft Graph / Copilot Chat API
     copilot_tenant_id: str | None = os.getenv("COPILOT_TENANT_ID")

@@ -18,14 +18,14 @@ def shade_cell(cell, fill: str) -> None:
     cell._tc.get_or_add_tcPr().append(_el("w:shd", val="clear", color="auto", fill=fill))
 
 
-def cell_borders(cell, *, left=None, bottom=None, size=6) -> None:
+def cell_borders(cell, *, top=None, left=None, bottom=None, right=None, size=6) -> None:
     """Set individual borders; anything not named is removed."""
     tcPr = cell._tc.get_or_add_tcPr()
     for old in tcPr.findall(qn("w:tcBorders")):
         tcPr.remove(old)
     borders = OxmlElement("w:tcBorders")
     for side in ("top", "left", "bottom", "right"):
-        colour = {"left": left, "bottom": bottom}.get(side)
+        colour = {"top": top, "left": left, "bottom": bottom, "right": right}.get(side)
         if colour:
             borders.append(_el(f"w:{side}", val="single", sz=size, space=0, color=colour))
         else:
@@ -156,3 +156,75 @@ def set_style(paragraph, style_id: str) -> None:
     pStyle = OxmlElement("w:pStyle")
     pStyle.set(qn("w:val"), style_id)
     pPr.insert(0, pStyle)
+
+
+def row_min_height(row, twips: int) -> None:
+    """Minimum row height ('at least'), so cards in a row match but can grow."""
+    trPr = row._tr.get_or_add_trPr()
+    h = OxmlElement("w:trHeight")
+    h.set(qn("w:val"), str(twips))
+    h.set(qn("w:hRule"), "atLeast")
+    trPr.append(h)
+
+
+def merge_across(cell, count: int) -> None:
+    """Make a cell span `count` grid columns (used by a full-width card)."""
+    tcPr = cell._tc.get_or_add_tcPr()
+    span = OxmlElement("w:gridSpan")
+    span.set(qn("w:val"), str(count))
+    tcPr.append(span)
+
+
+def all_borders(cell, colour: str, size: int = 4) -> None:
+    """Full frame around a cell, replacing any existing border set."""
+    tcPr = cell._tc.get_or_add_tcPr()
+    for old in tcPr.findall(qn("w:tcBorders")):
+        tcPr.remove(old)
+    borders = OxmlElement("w:tcBorders")
+    for side in ("top", "left", "bottom", "right"):
+        borders.append(_el(f"w:{side}", val="single", sz=size, space=0, color=colour))
+    tcPr.append(borders)
+
+
+def clear_borders(cell) -> None:
+    """Remove every border from a cell (used for the gap column)."""
+    tcPr = cell._tc.get_or_add_tcPr()
+    for old in tcPr.findall(qn("w:tcBorders")):
+        tcPr.remove(old)
+    borders = OxmlElement("w:tcBorders")
+    for side in ("top", "left", "bottom", "right"):
+        borders.append(_el(f"w:{side}", val="nil"))
+    tcPr.append(borders)
+
+
+def fixed_columns(table, widths: list[int]) -> None:
+    """Pin a table to exact column widths.
+
+    python-docx honours cell widths only when the table layout is fixed and the
+    grid matches, so both are written here; otherwise Word redistributes the
+    columns evenly and the card/gap proportions collapse.
+    """
+    tbl = table._tbl
+    tblPr = tbl.tblPr
+
+    for old in tblPr.findall(qn("w:tblLayout")):
+        tblPr.remove(old)
+    tblPr.append(_el("w:tblLayout", type="fixed"))
+
+    for old in tblPr.findall(qn("w:tblW")):
+        tblPr.remove(old)
+    tblPr.append(_el("w:tblW", w=sum(widths), type="dxa"))
+
+    for old in tbl.findall(qn("w:tblGrid")):
+        tbl.remove(old)
+    grid = OxmlElement("w:tblGrid")
+    for w in widths:
+        grid.append(_el("w:gridCol", w=w))
+    tbl.insert(1, grid)
+
+    for row in table.rows:
+        for cell, w in zip(row.cells, widths):
+            tcPr = cell._tc.get_or_add_tcPr()
+            for old in tcPr.findall(qn("w:tcW")):
+                tcPr.remove(old)
+            tcPr.append(_el("w:tcW", w=w, type="dxa"))

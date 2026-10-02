@@ -54,6 +54,51 @@ class Chapter(BaseModel):
         return v
 
 
+class Layout(str, Enum):
+    STANDARD = "standard"     # the multi-page newsletter / bulletin
+    ONE_PAGER = "one_pager"   # four cards plus short news, on a single page
+
+
+ICONS = ["warn", "star", "gear", "info", "smile", "heart", "check"]
+
+
+class Card(BaseModel):
+    """One grey box of the one-page layout. Empty cards are dropped."""
+
+    icon: str = "info"
+    title: str = ""
+    subtitle: str = ""
+    text: str = ""
+    treatment: Treatment = Treatment.DRAFT
+
+    @field_validator("icon")
+    @classmethod
+    def _known_icon(cls, v: str) -> str:
+        return v if v in ICONS else "info"
+
+    @property
+    def filled(self) -> bool:
+        return bool(self.title.strip() or self.text.strip())
+
+
+class NewsItem(BaseModel):
+    """One short-news row. Empty rows are dropped, so the band shrinks."""
+
+    icon: str = "smile"
+    label: str = ""
+    text: str = ""
+    treatment: Treatment = Treatment.DRAFT
+
+    @field_validator("icon")
+    @classmethod
+    def _known_icon(cls, v: str) -> str:
+        return v if v in ICONS else "smile"
+
+    @property
+    def filled(self) -> bool:
+        return bool(self.label.strip() or self.text.strip())
+
+
 class Masthead(BaseModel):
     header_kicker: str
     doc_type: str = "Newsletter"
@@ -86,8 +131,27 @@ class StyleSpec(BaseModel):
 class DocumentRequest(BaseModel):
     masthead: Masthead
     style: StyleSpec = Field(default_factory=StyleSpec)
+    layout: Layout = Layout.STANDARD
+    # standard layout
     chapters: list[Chapter] = Field(default_factory=list)
+    # one-pager layout
+    cards: list[Card] = Field(default_factory=list)
+    news: list[NewsItem] = Field(default_factory=list)
     provider: Literal["claude", "copilot", "manual"] | None = None
+
+    @field_validator("cards")
+    @classmethod
+    def _cap_cards(cls, v: list[Card]) -> list[Card]:
+        if len(v) > 4:
+            raise ValueError("the one-page layout takes at most 4 cards")
+        return v
+
+    @field_validator("news")
+    @classmethod
+    def _cap_news(cls, v: list[NewsItem]) -> list[NewsItem]:
+        if len(v) > 3:
+            raise ValueError("the one-page layout takes at most 3 short-news rows")
+        return v
 
     @field_validator("chapters")
     @classmethod
@@ -112,6 +176,21 @@ class RenderedChapter(BaseModel):
     provider_used: str
 
 
+class RenderedCard(BaseModel):
+    icon: str
+    title: str
+    subtitle: str = ""
+    blocks: list[RenderedBlock]
+    provider_used: str
+
+
+class RenderedNews(BaseModel):
+    icon: str
+    label: str
+    lines: list[str]
+    provider_used: str
+
+
 class DraftResponse(BaseModel):
     """The generated text, before it becomes a .docx.
 
@@ -120,9 +199,15 @@ class DraftResponse(BaseModel):
     """
 
     masthead: Masthead
-    chapters: list[RenderedChapter]
+    layout: Layout = Layout.STANDARD
+    chapters: list[RenderedChapter] = Field(default_factory=list)
+    cards: list[RenderedCard] = Field(default_factory=list)
+    news: list[RenderedNews] = Field(default_factory=list)
 
 
 class RenderRequest(BaseModel):
     masthead: Masthead
-    chapters: list[RenderedChapter]
+    layout: Layout = Layout.STANDARD
+    chapters: list[RenderedChapter] = Field(default_factory=list)
+    cards: list[RenderedCard] = Field(default_factory=list)
+    news: list[RenderedNews] = Field(default_factory=list)
