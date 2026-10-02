@@ -143,15 +143,20 @@ def generate(req: GenerateRequest):
     if req.fit_pages and req.target != "text":
         want = max(1, math.ceil((req.target_chars or PAGE_CHARS) / PAGE_CHARS))
         tries = 0
-        while len(pages) > want and tries < 2:
-            over = sum(p["chars"] for p in pages[want:])
+        while len(pages) > want and tries < 3:
+            # Cut in proportion to the overrun, plus a margin: removing words
+            # from bullets and boxes frees less room than from running text.
+            fill = sum(p["fill"] for p in pages)
+            pct = min(60, math.ceil((fill - want) / fill * 100) + 8 + 4 * tries)
+            cut = math.ceil(visible_chars(draft) * pct / 100)
             messages.append({"role": "assistant", "content": draft})
             messages.append({
                 "role": "user",
                 "content": (
                     f"This is too long for {want} WebManuals page"
-                    f"{'s' if want > 1 else ''}: about {over + 150} characters "
-                    "must go. Tighten the wording, merge points and drop "
+                    f"{'s' if want > 1 else ''}: it fills {fill:.2f} pages. "
+                    f"Shorten it by about {pct}% (roughly {cut} characters). "
+                    "Tighten the wording, merge points and drop "
                     "repetition, but keep every fact, figure, reference and "
                     "[TO CONFIRM] marker, and keep all house-style rules. Return "
                     "the full corrected content with no commentary."

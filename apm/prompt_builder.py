@@ -150,6 +150,11 @@ PAGE_CHARS = 3000  # plain text on one WebManuals page; see pages.py
 def length_instruction(target_chars: int, fit_pages: bool) -> str:
     """Length as a number of characters, from the slider in the editor."""
     n = int(target_chars)
+    if fit_pages:
+        # Headings, bullets and boxes eat into a page, so a text meant to fill
+        # its last page is aimed lower; an overrun costs a whole extra page.
+        pages = max(1, math.ceil(n / PAGE_CHARS))
+        n = min(n, round(pages * PAGE_CHARS * 0.8 / 50) * 50)
     text = (
         f"Length: aim for about {n} characters of text the reader sees, including "
         f"spaces (roughly {max(1, round(n / 6.5))} words), and stay within 15% of that. "
@@ -158,7 +163,6 @@ def length_instruction(target_chars: int, fit_pages: bool) -> str:
         "pad, and never drop a fact from the notes to reach the length."
     )
     if fit_pages:
-        pages = max(1, math.ceil(n / PAGE_CHARS))
         text += (
             " The text is published in WebManuals, where a page holds about "
             f"{PAGE_CHARS} characters of running text and does not break by itself: "
@@ -167,7 +171,8 @@ def length_instruction(target_chars: int, fit_pages: bool) -> str:
             "characters."
         )
         if pages == 1:
-            text += " The whole text must fit on one page."
+            text += (" The whole text must fit on one page, so treat the length "
+                     "as a ceiling rather than a target.")
         else:
             text += (
                 f" It will be split into {pages} pages. Let a heading fall roughly "
