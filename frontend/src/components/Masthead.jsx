@@ -10,13 +10,15 @@ const REVISIONS = Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2,
  * grows with its content. Editors change the masthead where they can see it, so
  * there is nothing to map between a field label and the printed result.
  */
-function Inline({ value, onChange, placeholder, className, ariaLabel, min = 4 }) {
+function Inline({ value, onChange, placeholder, className, ariaLabel, min = 4, caps = false }) {
   const width = Math.max(min, (value || placeholder || "").length + 1);
+  // "ch" is a lowercase digit's width; spaced capitals need roughly half as much again.
+  const css = caps ? `calc(${width}ch * 1.45)` : width + "ch";
   return (
     <input
       type="text"
       className={"inline-field " + (className || "")}
-      style={{ width: width + "ch" }}
+      style={{ width: css }}
       value={value}
       placeholder={placeholder}
       aria-label={ariaLabel}
@@ -108,6 +110,7 @@ export default function Masthead({ state, patch }) {
           <img className="mast-icon" src={icon} alt="" />
           <Inline
             className="mast-kicker"
+            caps
             value={m.header_kicker}
             onChange={setKicker}
             placeholder="PUBLICATION NAME"

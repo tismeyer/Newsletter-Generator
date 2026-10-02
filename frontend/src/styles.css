@@ -190,16 +190,6 @@ textarea.short{min-height:56px}
 .p-newslabel{font-size:9.5px;font-weight:700;color:#E4032E;text-transform:uppercase;letter-spacing:.11em}
 .p-newstext p{font-size:9px;line-height:1.45;margin:0 0 2px}
 
-/* --- icon picker --- */
-.iconpick{display:grid;grid-template-columns:repeat(auto-fill,minmax(66px,1fr));gap:6px}
-.icontile{display:flex;flex-direction:column;align-items:center;gap:4px;padding:7px 4px;
-  border:1px solid var(--line);border-radius:3px;background:var(--panel);cursor:pointer}
-.icontile:hover{border-color:var(--muted)}
-.icontile.on{border-color:var(--red);box-shadow:inset 0 0 0 1px var(--red)}
-.icontile input{position:absolute;opacity:0;width:0;height:0}
-.icontile img{width:24px;height:24px}
-.icontile span{font-size:10.5px;color:var(--muted);text-align:center;line-height:1.2}
-.icontile.on span{color:var(--ink);font-weight:700}
 .p-cardhead{display:flex;align-items:center;gap:9px;margin-bottom:6px}
 .p-cardhead .p-cardsub{margin-bottom:0}
 .p-icon{width:28px;height:28px;flex:none}
@@ -213,7 +203,7 @@ textarea.short{min-height:56px}
 .mast-top{display:flex;align-items:center;gap:8px;border-bottom:1px solid #848687;padding-bottom:7px}
 .mast-icon{width:17px;height:17px}
 .mast-logo{width:104px}
-.inline-field{
+.inline-field,input.inline-field,textarea.inline-field{
   border:1px solid transparent;border-radius:2px;background:transparent;padding:1px 3px;
   font-family:Arial,Helvetica,sans-serif;max-width:100%;
 }
@@ -227,7 +217,7 @@ textarea.short{min-height:56px}
 .mast-headline{font-size:15px;color:#40494F;display:block;margin-top:2px}
 .mast-daterow{display:flex;align-items:center;gap:8px;border-bottom:1px solid #D7D9DA;padding-bottom:8px}
 .mast-date{font-size:11.5px;color:#848687;padding-left:4px}
-.datepick{width:auto;padding:2px 5px;font-size:11px;border:1px solid var(--line);border-radius:2px;background:#fff;color:#40494F}
+input.datepick{width:auto;padding:2px 5px;font-size:11px;border:1px solid var(--line);border-radius:2px;background:#fff;color:#40494F}
 .mast-foot{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:13px;
   border-top:1px solid #848687;padding-top:6px;font-size:10.5px;color:#848687}
 .mast-foot b{color:#40494F}
@@ -256,3 +246,56 @@ textarea.short{min-height:56px}
 }
 .pickmenu button:hover{background:var(--shell)}
 .pickmenu button.on{color:var(--red);font-weight:700}
+
+/* --- cards and short news edited in place --- */
+.ed-paper{border:1px solid var(--line);border-radius:3px;background:#fff;padding:14px;color:#40494F}
+:root[data-theme="dark"] .ed-paper{background:#f7f8f9}
+.ed-cards{display:grid;grid-template-columns:1fr 1fr;gap:14px 12px}
+@media (max-width:640px){ .ed-cards{grid-template-columns:1fr} }
+.ed-cardslot{display:flex;flex-direction:column;min-width:0}
+.ed-cardslot.full{grid-column:1/-1}
+.ed-card{flex:1;background:#F2F3F4;border:1px solid #DDE0E2;padding:10px 12px}
+.ed-cardslot.unused .ed-card{background:#fafafa;border-style:dashed}
+.ed-cardslot.unused .ed-card .iconbtn{opacity:.45}
+.ed-cardslot.unused .ed-card .iconbtn:hover{opacity:1}
+.ed-cardhead{display:flex;align-items:center;gap:9px;margin-bottom:6px}
+.ed-cardtitles{flex:1;min-width:0;display:flex;flex-direction:column}
+.ed-card .inline-field,.ed-newsrow .inline-field{width:100%;color:#40494F}
+.ed-card .inline-field:focus,.ed-newsrow .inline-field:focus{background:#fff}
+.ed-cardtitle{font-size:12px;font-weight:700;color:#E4032E !important;text-transform:uppercase;letter-spacing:.11em}
+.ed-cardsub{font-size:13.5px;font-weight:700;color:#0B2545 !important}
+.ed-cardbody{font-size:12.5px;line-height:1.45}
+textarea.inline-field.grow{display:block;resize:none;overflow:hidden;min-height:0;line-height:1.45}
+.ed-tools{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:5px;font-size:11.5px}
+.ed-tools select{width:auto;padding:3px 6px;font-size:11.5px}
+.ed-tools .btn.link{font-size:11.5px}
+.ed-tools .spacer{flex:1}
+.ed-news{padding-top:4px;padding-bottom:4px}
+.ed-newsslot{border-bottom:1px solid #DDE0E2;padding:8px 0}
+.ed-newsslot:last-child{border-bottom:0}
+.ed-newsrow{display:grid;grid-template-columns:200px 1fr;gap:12px;align-items:start}
+@media (max-width:640px){ .ed-newsrow{grid-template-columns:1fr} }
+.ed-newslabel{display:flex;align-items:center;gap:9px}
+.ed-newslabeltext{font-size:12px;font-weight:700;color:#E4032E !important;text-transform:uppercase;letter-spacing:.11em}
+.ed-newstext{font-size:12.5px}
+.ed-newsslot.unused .iconbtn{opacity:.45}
+.ed-newsslot.unused .iconbtn:hover{opacity:1}
+
+/* the round icon as its own chooser */
+.iconbtn-wrap{position:relative;display:inline-flex;flex:none}
+.iconbtn{border:0;padding:0;background:none;border-radius:50%;cursor:pointer;flex:none}
+.iconbtn img{width:100%;height:100%;display:block}
+.iconbtn:hover,.iconbtn[aria-expanded="true"]{box-shadow:0 0 0 2px #fff,0 0 0 4px #E4032E}
+.iconmenu{
+  position:absolute;top:calc(100% + 6px);left:0;z-index:20;width:300px;padding:6px;
+  display:grid;grid-template-columns:repeat(5,1fr);gap:2px;
+  background:var(--panel);border:1px solid var(--line);border-radius:3px;
+  box-shadow:0 6px 20px rgba(0,0,0,.14);
+}
+.iconmenu button{display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 2px;
+  border:1px solid transparent;border-radius:3px;background:none;cursor:pointer}
+.iconmenu button:hover{background:var(--shell)}
+.iconmenu button.on{border-color:var(--red)}
+.iconmenu img{width:26px;height:26px}
+.iconmenu span{font-size:10px;color:var(--muted);line-height:1.15;text-align:center}
+.iconmenu button.on span{color:var(--ink);font-weight:700}

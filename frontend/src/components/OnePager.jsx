@@ -1,4 +1,4 @@
-import { Segmented } from "./Bits.jsx";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   ICONS,
   TREATMENTS,
@@ -21,115 +21,170 @@ function Counter({ used, limit }) {
   );
 }
 
-/** Radio group showing the actual icons, so the choice is made by sight. */
-function IconPicker({ value, onChange, name }) {
+/** Closes a popover on an outside click or Escape. */
+function useDismiss(open, setOpen) {
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!open) return;
+    const away = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
+    const esc = (e) => e.key === "Escape" && setOpen(false);
+    document.addEventListener("mousedown", away);
+    document.addEventListener("keydown", esc);
+    return () => {
+      document.removeEventListener("mousedown", away);
+      document.removeEventListener("keydown", esc);
+    };
+  }, [open, setOpen]);
+  return ref;
+}
+
+/**
+ * The round icon exactly as it prints. Clicking it opens the full set to pick
+ * from, so the choice is made by sight and in place.
+ */
+function IconButton({ value, onChange, size }) {
+  const [open, setOpen] = useState(false);
+  const ref = useDismiss(open, setOpen);
+  const current = ICONS.find((i) => i.v === value);
   return (
-    <div className="iconpick" role="radiogroup" aria-label="Icon">
-      {ICONS.map((i) => (
-        <label
-          key={i.v}
-          className={"icontile" + (value === i.v ? " on" : "")}
-          title={i.label}
-        >
-          <input
-            type="radio"
-            name={name}
-            value={i.v}
-            checked={value === i.v}
-            onChange={() => onChange(i.v)}
-          />
-          <img src={ICON_SRC[i.v]} alt="" />
-          <span>{i.label}</span>
-        </label>
-      ))}
-    </div>
+    <span className="iconbtn-wrap" ref={ref}>
+      <button
+        type="button"
+        className="iconbtn"
+        style={{ width: size, height: size }}
+        title={"Icon: " + (current ? current.label : value) + " (click to change)"}
+        aria-label="Change icon"
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+      >
+        <img src={ICON_SRC[value]} alt="" />
+      </button>
+      {open && (
+        <div className="iconmenu" role="radiogroup" aria-label="Icon">
+          {ICONS.map((i) => (
+            <button
+              key={i.v}
+              type="button"
+              role="radio"
+              aria-checked={value === i.v}
+              className={value === i.v ? "on" : ""}
+              onClick={() => {
+                onChange(i.v);
+                setOpen(false);
+              }}
+            >
+              <img src={ICON_SRC[i.v]} alt="" />
+              <span>{i.label}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </span>
+  );
+}
+
+/** A textarea styled as printed body text that grows with what is typed. */
+function GrowText({ value, onChange, placeholder, className, ariaLabel }) {
+  const ref = useRef(null);
+  const fit = () => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = "auto";
+    // scrollHeight leaves out the border; add it back or the last line clips.
+    el.style.height = el.scrollHeight + (el.offsetHeight - el.clientHeight) + "px";
+  };
+  useLayoutEffect(fit, [value]);
+  useEffect(() => {
+    // Rewrapping (a card switching between half and full width) changes height too.
+    let width = 0;
+    const ro = new ResizeObserver(([entry]) => {
+      const w = entry.contentRect.width;
+      if (w !== width) {
+        width = w;
+        fit();
+      }
+    });
+    ro.observe(ref.current);
+    return () => ro.disconnect();
+  }, []);
+  return (
+    <textarea
+      ref={ref}
+      rows={1}
+      className={"inline-field grow " + (className || "")}
+      value={value}
+      placeholder={placeholder}
+      aria-label={ariaLabel}
+      onChange={(e) => onChange(e.target.value)}
+    />
   );
 }
 
 function Card({ card, index, activeCards, activeNews, onChange, onClear }) {
   const set = (k, v) => onChange({ ...card, [k]: v });
   const limit = cardLimit(index, Math.max(activeCards, 1), activeNews);
-  const full = isFullWidth(index, activeCards);
-  const copy = TREATMENT_COPY[card.treatment];
   const filled = cardFilled(card);
+  const full = filled && isFullWidth(index, activeCards);
+  const copy = TREATMENT_COPY[card.treatment];
 
   return (
-    <details className={"chapter" + (filled ? "" : " muted")} open={filled || index < 2}>
-      <summary>
-        <span className="num">{index + 1}</span>
-        <span className="ttl">{card.title || "Empty card"}</span>
+    <div className={"ed-cardslot" + (full ? " full" : "") + (filled ? "" : " unused")}>
+      <div className="ed-card">
+        <div className="ed-cardhead">
+          <IconButton value={card.icon} onChange={(v) => set("icon", v)} size={30} />
+          <div className="ed-cardtitles">
+            <input
+              type="text"
+              className="inline-field ed-cardtitle"
+              placeholder={"Card " + (index + 1) + " title"}
+              aria-label={"Card " + (index + 1) + " title"}
+              value={card.title}
+              onChange={(e) => set("title", e.target.value)}
+            />
+            <input
+              type="text"
+              className="inline-field ed-cardsub"
+              placeholder="Subtitle (optional)"
+              aria-label={"Card " + (index + 1) + " subtitle"}
+              value={card.subtitle}
+              onChange={(e) => set("subtitle", e.target.value)}
+            />
+          </div>
+        </div>
+        <GrowText
+          className="ed-cardbody"
+          value={card.text}
+          onChange={(v) => set("text", v)}
+          placeholder={copy.placeholder}
+          ariaLabel={"Card " + (index + 1) + " text"}
+        />
+      </div>
+      <div className="ed-tools">
+        <select
+          value={card.treatment}
+          aria-label="What should happen to this text?"
+          title={copy.hint}
+          onChange={(e) => set("treatment", e.target.value)}
+        >
+          {TREATMENTS.map((t) => (
+            <option key={t.v} value={t.v}>
+              {t.label}
+            </option>
+          ))}
+        </select>
+        <Counter used={card.text.length} limit={limit} />
+        <span className="spacer" />
         {filled ? (
-          full ? (
-            <span className="tag">full width</span>
-          ) : (
-            <span className="tag">half width</span>
-          )
+          <button type="button" className="btn link" onClick={onClear}>
+            Clear
+          </button>
         ) : (
           <span className="tag">not used</span>
         )}
-      </summary>
-      <div className="inner">
-        <label className="f">
-          <span>Title</span>
-          <input
-            type="text"
-            placeholder="e.g. Flight Safety Spotlight"
-            value={card.title}
-            onChange={(e) => set("title", e.target.value)}
-          />
-        </label>
-
-        <div className="f mt10">
-          <span className="hint block">Icon</span>
-          <IconPicker
-            name={"card-icon-" + card.id}
-            value={card.icon}
-            onChange={(v) => set("icon", v)}
-          />
-        </div>
-
-        <label className="f mt10">
-          <span>Subtitle</span>
-          <input
-            type="text"
-            placeholder="e.g. PRM and infant seating"
-            value={card.subtitle}
-            onChange={(e) => set("subtitle", e.target.value)}
-          />
-        </label>
-
-        <label className="f mt10">
-          <span className="rowlabel">
-            {copy.label}
-            <Counter used={card.text.length} limit={limit} />
-          </span>
-          <textarea
-            placeholder={copy.placeholder}
-            value={card.text}
-            onChange={(e) => set("text", e.target.value)}
-          />
-        </label>
-
-        <div className="mt8">
-          <Segmented
-            label="What should happen to this text?"
-            options={TREATMENTS}
-            value={card.treatment}
-            onChange={(v) => set("treatment", v)}
-          />
-          <span className="hint">{copy.hint}</span>
-        </div>
-
-        {filled && (
-          <div className="inline mt10">
-            <span className="spacer" />
-            <button type="button" className="btn link" onClick={onClear}>
-              Clear this card
-            </button>
-          </div>
-        )}
       </div>
-    </details>
+    </div>
   );
 }
 
@@ -137,46 +192,37 @@ function NewsRow({ item, index, limit, onChange, onClear }) {
   const set = (k, v) => onChange({ ...item, [k]: v });
   const filled = newsFilled(item);
   return (
-    <div className={"boxrow" + (filled ? "" : " muted")}>
-      <div className="top">
-        <strong>Short news {index + 1}</strong>
-        {!filled && <span className="tag">not used</span>}
+    <div className={"ed-newsslot" + (filled ? "" : " unused")}>
+      <div className="ed-newsrow">
+        <div className="ed-newslabel">
+          <IconButton value={item.icon} onChange={(v) => set("icon", v)} size={26} />
+          <GrowText
+            className="ed-newslabeltext"
+            value={item.label}
+            onChange={(v) => set("label", v.replace(/\n/g, " "))}
+            placeholder={"Short news " + (index + 1)}
+            ariaLabel={"Short news " + (index + 1) + " label"}
+          />
+        </div>
+        <GrowText
+          className="ed-newstext"
+          value={item.text}
+          onChange={(v) => set("text", v)}
+          placeholder="Two or three short lines."
+          ariaLabel={"Short news " + (index + 1) + " text"}
+        />
+      </div>
+      <div className="ed-tools">
+        <Counter used={item.text.length} limit={limit} />
         <span className="spacer" />
-        {filled && (
+        {filled ? (
           <button type="button" className="btn link" onClick={onClear}>
             Clear
           </button>
+        ) : (
+          <span className="tag">not used</span>
         )}
       </div>
-      <label className="f">
-        <span>Label</span>
-        <input
-          type="text"
-          placeholder="e.g. Team news"
-          value={item.label}
-          onChange={(e) => set("label", e.target.value)}
-        />
-      </label>
-      <div className="f mt8">
-        <span className="hint block">Icon</span>
-        <IconPicker
-          name={"news-icon-" + item.id}
-          value={item.icon}
-          onChange={(v) => set("icon", v)}
-        />
-      </div>
-      <label className="f mt8">
-        <span className="rowlabel">
-          Text
-          <Counter used={item.text.length} limit={limit} />
-        </span>
-        <textarea
-          className="short"
-          placeholder="Two or three short lines."
-          value={item.text}
-          onChange={(e) => set("text", e.target.value)}
-        />
-      </label>
     </div>
   );
 }
@@ -196,10 +242,12 @@ export default function OnePager({ state, patch }) {
           Cards <span className="soft">{activeCards} of 4 in use</span>
         </legend>
         <p className="hint mb10">
-          Leave a card empty to drop it. Two cards fill a row; with an odd number the
+          Type straight into the cards as they will appear, and click an icon to change
+          it. Leave a card empty to drop it. Two cards fill a row; with an odd number the
           last one spans the full width. Fewer cards means a larger allowance for the
           rest &mdash; currently about {b.lines_per_row} lines per row.
         </p>
+        <div className="ed-paper ed-cards">
         {state.cards.map((c, i) => (
           <Card
             key={c.id}
@@ -211,6 +259,7 @@ export default function OnePager({ state, patch }) {
             onClear={() => setCard(i, { ...c, title: "", subtitle: "", text: "" })}
           />
         ))}
+        </div>
       </fieldset>
 
       <fieldset>
@@ -221,6 +270,7 @@ export default function OnePager({ state, patch }) {
           Rows left empty do not appear in the document, and the space returns to the
           cards above.
         </p>
+        <div className="ed-paper ed-news">
         {state.news.map((n, i) => (
           <NewsRow
             key={n.id}
@@ -231,6 +281,7 @@ export default function OnePager({ state, patch }) {
             onClear={() => setNews(i, { ...n, label: "", text: "" })}
           />
         ))}
+        </div>
       </fieldset>
     </>
   );
