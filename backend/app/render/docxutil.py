@@ -241,3 +241,25 @@ def fixed_columns(table, widths: list[int]) -> None:
             for old in tcPr.findall(qn("w:tcW")):
                 tcPr.remove(old)
             tcPr.append(_el("w:tcW", w=w, type="dxa"))
+
+
+def set_size(paragraph, size_pt: float) -> None:
+    """Override the style's type size on a paragraph: its runs and its
+    paragraph mark. The mark matters for lists, because Word sizes the bullet
+    glyph from it; without it the bullet keeps the style size."""
+    half_points = str(int(round(size_pt * 2)))
+    for run in paragraph.runs:
+        rPr = run._r.get_or_add_rPr()
+        for tag in ("w:sz", "w:szCs"):
+            for old in rPr.findall(qn(tag)):
+                rPr.remove(old)
+            rPr.append(_el(tag, val=half_points))
+    pPr = paragraph._p.get_or_add_pPr()
+    mark = pPr.find(qn("w:rPr"))
+    if mark is None:
+        mark = OxmlElement("w:rPr")
+        pPr.append(mark)  # rPr is the last child pPr may have before sectPr/pPrChange
+    for tag in ("w:sz", "w:szCs"):
+        for old in mark.findall(qn(tag)):
+            mark.remove(old)
+        mark.append(_el(tag, val=half_points))

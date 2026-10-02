@@ -46,6 +46,12 @@ The one-page layout arranges itself around what is actually filled in:
   leaving a hole, so two or three cards fill the page as well as four.
 * Empty cards and empty short-news rows are dropped before layout, and the
   space returns to the boxes that remain.
+* All card and short-news text is set at one size, chosen from the content:
+  the largest size from 12 pt down to 9 pt (half-point steps) at which
+  everything fits, with headings one point above the body. `fit_size` in
+  `app/budget.py` decides it for the Word file and `fitSize` in
+  `frontend/src/budget.js` mirrors it for the preview and the size shown in
+  the form.
 * Because fitting on one page is the point, every box has a character
   allowance computed in `app/budget.py` from how many boxes are in use. The
   form shows a live counter against it, and the limit is also stated in the

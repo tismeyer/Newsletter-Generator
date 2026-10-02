@@ -8,8 +8,9 @@ import {
   cardFilled,
   hasDraft,
   newsFilled,
+  onePagerSize,
 } from "../model.js";
-import { budget, cardLimit, isFullWidth } from "../budget.js";
+import { MAX_PT, MIN_PT, budget, cardLimit, isFullWidth } from "../budget.js";
 import { ICON_SRC } from "../icons.js";
 
 /** Live character counter. Turns amber near the limit and red past it. */
@@ -274,6 +275,11 @@ export default function OnePager({ state, patch, notify }) {
           it. Leave a card empty to drop it. Two cards fill a row; with an odd number the
           last one spans the full width. Fewer cards means a larger allowance for the
           rest &mdash; currently about {b.lines_per_row} lines per row.
+        </p>
+        <p className="hint mb10">
+          Text size on the page: <b>{onePagerSize(state)} pt</b> for
+          all cards and short news. It grows to {MAX_PT} pt when there is little text and
+          shrinks to {MIN_PT} pt when there is a lot.
         </p>
         <div className="ed-paper ed-cards">
         {state.cards.map((c, i) => (

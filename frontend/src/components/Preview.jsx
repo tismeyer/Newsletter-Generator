@@ -1,7 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import logo from "../assets/logo.png";
 import icon from "../assets/icon.png";
-import { cardFilled, departmentFrom, fmtDate, hasDraft, newsFilled, textToBlocks } from "../model.js";
+import {
+  cardFilled,
+  departmentFrom,
+  fmtDate,
+  hasDraft,
+  newsFilled,
+  onePagerSize,
+  textToBlocks,
+} from "../model.js";
 import { isFullWidth } from "../budget.js";
 import { ICON_SRC } from "../icons.js";
 
@@ -128,8 +136,10 @@ function OnePagerPreview({ state }) {
     );
   }
 
+  // One size for all card and short-news text, as in the Word file (pt to px at 96 dpi).
+  const size = onePagerSize(state);
   return (
-    <>
+    <div className="p-onepager" style={{ "--fs": (size * 96) / 72 + "px" }}>
       {rows}
       {news.length > 0 && (
         <div className="p-news">
@@ -147,7 +157,7 @@ function OnePagerPreview({ state }) {
           ))}
         </div>
       )}
-    </>
+    </div>
   );
 }
 

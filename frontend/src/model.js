@@ -1,3 +1,5 @@
+import { fitSize } from "./budget.js";
+
 export const KICKERS = [
   "ACM Newsletter",
   "Cabin Department Newsletter",
@@ -294,4 +296,22 @@ export function toPayload(s) {
       treatment: hasDraft(n) ? "verbatim" : n.treatment,
     })),
   };
+}
+
+/** A card's body as [text, isBullet] pairs: its generated text if any, else the notes. */
+function cardParagraphs(c) {
+  return textToBlocks(hasDraft(c) ? c.draft : c.text).flatMap((b) =>
+    b.kind === "bullets"
+      ? b.items.map((t) => [t, true])
+      : b.kind === "body"
+        ? [[b.text, false]]
+        : [[b.title, false], [b.text, false]]
+  );
+}
+
+/** The one text size, in points, used for every card and short-news row. */
+export function onePagerSize(s) {
+  const lines = (n) =>
+    (hasDraft(n) ? n.draft : n.text).split("\n").map((l) => l.trim()).filter(Boolean);
+  return fitSize(s.cards.filter(cardFilled).map(cardParagraphs), s.news.filter(newsFilled).map(lines));
 }

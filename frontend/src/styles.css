@@ -319,3 +319,10 @@ textarea.inline-field.grow{display:block;resize:none;overflow:hidden;min-height:
 .draftlabel{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}
 .draftpanel textarea.draftbody{width:100%;font-size:13px;line-height:1.5;padding:6px 8px;border-color:var(--line);background:#fff}
 .tag.ready{color:#3E6E9E;border-color:#3E6E9E}
+
+/* one-page layout: card and short-news text share one size (--fs, from fitSize) */
+.p-onepager .p-cardbody,.p-onepager .p-ul li,.p-onepager .p-newstext p{font-size:var(--fs);line-height:1.3}
+.p-onepager .p-ul{margin:0 0 3px}
+.p-onepager .p-ul li{margin-bottom:1px}
+.p-onepager .p-cardtitle,.p-onepager .p-cardsub,.p-onepager .p-newslabel{font-size:calc(var(--fs) + 1.33px)}
+.p-onepager .p-newsrow{grid-template-columns:189px 1fr}

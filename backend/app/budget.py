@@ -12,7 +12,16 @@ values, not theory.
 """
 from __future__ import annotations
 
-# --- measured from a rendered A4 page at the layout's 8 pt body size ---
+# --- measured from a rendered A4 page at an 8 pt body size ---
+# Card and short-news text is now set between MIN_PT and MAX_PT (see fit_size);
+# line height and characters per line scale from these 8 pt measurements.
+BASE_PT = 8.0
+MIN_PT = 9.0
+MAX_PT = 12.0
+STEP_PT = 0.5
+PARA_GAP_CM = 0.074          # CardBody space-after (2.1 pt), not scaled
+NEWS_ICON_CM = 0.85          # a news row is never shorter than its 24 pt icon
+BULLET_SHARE = 0.92          # bullet text is indented, so slightly fewer chars
 PAGE_BODY_CM = 24.1          # printable height between the margins
 TITLE_BLOCK_CM = 2.6         # title, headline, date and the rule beneath
 CARD_ROW_OVERHEAD_CM = 1.15  # card padding, border, icon heading row and the gap below
@@ -38,6 +47,14 @@ def is_full_width(index: int, active_cards: int) -> bool:
     return active_cards % 2 == 1 and index == active_cards - 1
 
 
+def line_cm(size_pt: float) -> float:
+    return LINE_CM * size_pt / BASE_PT
+
+
+def chars_per_line(base_chars: int, size_pt: float) -> float:
+    return base_chars * BASE_PT / size_pt
+
+
 def budget(active_cards: int, active_news: int) -> dict:
     """Return the per-box character allowances for this combination.
 
@@ -53,19 +70,71 @@ def budget(active_cards: int, active_news: int) -> dict:
         + rows * CARD_ROW_OVERHEAD_CM
         + active_news * NEWS_ROW_OVERHEAD_CM
     )
+    # Allowances assume the smallest size, so text within them always fits.
     usable_cm = max(0.0, PAGE_BODY_CM - overhead)
-    total_lines = int(usable_cm / LINE_CM)
+    total_lines = int(usable_cm / line_cm(MIN_PT))
 
     news_lines = active_news * NEWS_LINES
     card_lines = max(0, total_lines - news_lines)
     lines_per_row = card_lines // rows if rows else 0
 
     return {
-        "card_half": lines_per_row * CHARS_PER_LINE_HALF,
-        "card_full": lines_per_row * CHARS_PER_LINE_FULL,
-        "news": NEWS_LINES * CHARS_PER_LINE_NEWS,
+        "card_half": int(lines_per_row * chars_per_line(CHARS_PER_LINE_HALF, MIN_PT)),
+        "card_full": int(lines_per_row * chars_per_line(CHARS_PER_LINE_FULL, MIN_PT)),
+        "news": int(NEWS_LINES * chars_per_line(CHARS_PER_LINE_NEWS, MIN_PT)),
         "lines_per_row": lines_per_row,
     }
+
+
+def _lines(text: str, per_line: float) -> int:
+    return max(1, -(-len(text) // max(1, int(per_line))))
+
+
+def _card_cm(paragraphs: list[tuple[str, bool]], full: bool, size: float) -> float:
+    """Height of one card's body text. `paragraphs` is (text, is_bullet)."""
+    base = CHARS_PER_LINE_FULL if full else CHARS_PER_LINE_HALF
+    per_line = chars_per_line(base, size)
+    h = 0.0
+    for text, bullet in paragraphs:
+        h += _lines(text, per_line * (BULLET_SHARE if bullet else 1)) * line_cm(size)
+        h += PARA_GAP_CM
+    return h
+
+
+def _news_cm(lines: list[str], size: float) -> float:
+    per_line = chars_per_line(CHARS_PER_LINE_NEWS, size)
+    h = sum(_lines(l, per_line) for l in lines) * line_cm(size)
+    return max(h, NEWS_ICON_CM) + NEWS_ROW_OVERHEAD_CM
+
+
+def fit_size(cards: list[list[tuple[str, bool]]], news: list[list[str]]) -> float:
+    """The largest text size, MIN_PT..MAX_PT, at which everything fits the page.
+
+    One size for every card and short-news row, so the page reads as one
+    piece: short content gets larger type, long content shrinks towards
+    MIN_PT. Content too long even at MIN_PT stays at MIN_PT (the form's
+    counters warn about that). Mirrored in frontend/src/budget.js.
+    """
+    n = len(cards)
+    size = MAX_PT
+    while size >= MIN_PT:
+        # The card heading (title and subtitle) grows with the text as well.
+        row = CARD_ROW_OVERHEAD_CM + 2 * (line_cm(size) - line_cm(BASE_PT))
+        total = TITLE_BLOCK_CM
+        i = 0
+        while i < n:
+            if is_full_width(i, n):
+                total += row + _card_cm(cards[i], True, size)
+                i += 1
+            else:
+                pair = cards[i:i + 2]
+                total += row + max(_card_cm(c, False, size) for c in pair)
+                i += 2
+        total += sum(_news_cm(l, size) for l in news)
+        if total <= PAGE_BODY_CM:
+            return size
+        size -= STEP_PT
+    return MIN_PT
 
 
 def card_limit(index: int, active_cards: int, active_news: int) -> int:

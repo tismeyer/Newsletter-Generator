@@ -19,7 +19,7 @@ from docx.enum.table import WD_ALIGN_VERTICAL
 from docx.oxml.ns import qn
 from docx.shared import Pt, RGBColor, Twips
 
-from ..budget import card_rows, is_full_width
+from ..budget import card_rows, fit_size, is_full_width
 from ..schemas import Masthead, RenderedCard, RenderedNews
 from . import docxutil as X
 
@@ -85,7 +85,7 @@ def _ensure_trailing_paragraph(cell) -> None:
         p.paragraph_format.line_spacing = Pt(1)
 
 
-def _fill_card(cell, card: RenderedCard, width: int) -> None:
+def _fill_card(cell, card: RenderedCard, width: int, size: float) -> None:
     X.shade_cell(cell, CARD_BG)
     X.cell_borders(cell, left=CARD_LINE, bottom=CARD_LINE, size=4)
     # cell_borders clears the sides it is not given, so restore the full frame
@@ -94,12 +94,16 @@ def _fill_card(cell, card: RenderedCard, width: int) -> None:
     cell.vertical_alignment = WD_ALIGN_VERTICAL.TOP
 
     head = _icon_header(cell, card.icon, CARD_ICON_PT, width - 2 * CARD_PAD)
+    # Headings stay one point above the body, as in the template (9 pt over 8 pt).
     title = head.paragraphs[0]
     X.set_style(title, "CardTitle")
     title.add_run(card.title.upper())
+    X.set_size(title, size + 1)
 
     if card.subtitle.strip():
-        X.set_style(head.add_paragraph(card.subtitle), "CardSubtitle")
+        sub = head.add_paragraph(card.subtitle)
+        X.set_style(sub, "CardSubtitle")
+        X.set_size(sub, size + 1)
     # Close the heading's last paragraph flush with the icon so it centres.
     head.paragraphs[-1].paragraph_format.space_after = Pt(0)
     # Breathing room between the heading row and the card's body text.
@@ -114,19 +118,24 @@ def _fill_card(cell, card: RenderedCard, width: int) -> None:
                 p = cell.add_paragraph(item)
                 X.set_style(p, "CardBody")
                 X.apply_numpr(p, bullet_numpr)
+                X.set_size(p, size)
         elif block.kind == "body":
             for line in [t for t in block.text.split("\n") if t.strip()]:
-                X.set_style(cell.add_paragraph(line.strip()), "CardBody")
+                p = cell.add_paragraph(line.strip())
+                X.set_style(p, "CardBody")
+                X.set_size(p, size)
         else:
             # A highlight box inside a card would fight the card itself, so the
             # box title becomes a sub-heading and its text ordinary body copy.
             if block.title:
                 X.set_style(cell.add_paragraph(block.title), "CardSub")
-            X.set_style(cell.add_paragraph(block.text), "CardBody")
+            p = cell.add_paragraph(block.text)
+            X.set_style(p, "CardBody")
+            X.set_size(p, size)
     _ensure_trailing_paragraph(cell)
 
 
-def _card_tables(doc, cards: list[RenderedCard], bullet_numpr):
+def _card_tables(doc, cards: list[RenderedCard], bullet_numpr, size: float):
     rows = card_rows(len(cards))
     min_height = MIN_ROW_ONE if rows == 1 else MIN_ROW_TWO
     tables = []
@@ -144,7 +153,7 @@ def _card_tables(doc, cards: list[RenderedCard], bullet_numpr):
             X.fixed_columns(table, [CONTENT_W])
             cell = row.cells[0]
             cell._bullet_numpr = bullet_numpr
-            _fill_card(cell, cards[i], CONTENT_W)
+            _fill_card(cell, cards[i], CONTENT_W, size)
             i += 1
         else:
             X.fixed_columns(table, [HALF, GAP, HALF])
@@ -152,15 +161,15 @@ def _card_tables(doc, cards: list[RenderedCard], bullet_numpr):
             X.clear_borders(gap)
             left._bullet_numpr = bullet_numpr
             right._bullet_numpr = bullet_numpr
-            _fill_card(left, cards[i], HALF)
-            _fill_card(right, cards[i + 1], HALF)
+            _fill_card(left, cards[i], HALF, size)
+            _fill_card(right, cards[i + 1], HALF, size)
             i += 2
         tables.append(table)
         doc.add_paragraph()  # gap below the row
     return tables
 
 
-def _news_table(doc, news: list[RenderedNews]) -> None:
+def _news_table(doc, news: list[RenderedNews], size: float) -> None:
     if not news:
         return
     table = doc.add_table(rows=len(news), cols=2)
@@ -180,6 +189,7 @@ def _news_table(doc, news: list[RenderedNews]) -> None:
         label = head.paragraphs[0]
         X.set_style(label, "NewsLabel")
         label.add_run(item.label.upper())
+        X.set_size(label, size + 1)
         _ensure_trailing_paragraph(label_cell)
 
         first = True
@@ -191,6 +201,20 @@ def _news_table(doc, news: list[RenderedNews]) -> None:
             else:
                 p.text = line.strip()
             X.set_style(p, "NewsBody")
+            X.set_size(p, size)
+
+
+def _paragraphs(card: RenderedCard) -> list[tuple[str, bool]]:
+    """A card's body as (text, is_bullet) pairs, for fit_size."""
+    out: list[tuple[str, bool]] = []
+    for block in card.blocks:
+        if block.kind == "bullets":
+            out += [(item, True) for item in block.items]
+        elif block.kind == "body":
+            out += [(t.strip(), False) for t in block.text.split("\n") if t.strip()]
+        else:
+            out += [(block.title, False), (block.text, False)]
+    return out
 
 
 def render_one_pager(
@@ -223,8 +247,12 @@ def render_one_pager(
     usable_cards = [c for c in cards if c.title.strip() or c.blocks]
     usable_news = [n for n in news if n.label.strip() or any(l.strip() for l in n.lines)]
 
-    _card_tables(doc, usable_cards, bullet_numpr)
-    _news_table(doc, usable_news)
+    size = fit_size(
+        [_paragraphs(c) for c in usable_cards],
+        [[l for l in n.lines if l.strip()] for n in usable_news],
+    )
+    _card_tables(doc, usable_cards, bullet_numpr, size)
+    _news_table(doc, usable_news, size)
 
     buf = io.BytesIO()
     doc.save(buf)
