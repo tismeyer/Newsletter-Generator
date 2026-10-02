@@ -8,6 +8,7 @@ output instructions.
 """
 
 import json
+import math
 from pathlib import Path
 
 CATEGORY_ORDER = [
@@ -143,12 +144,47 @@ STYLE_DEFAULTS = {
 }
 
 
+PAGE_CHARS = 3000  # plain text on one WebManuals page; see pages.py
+
+
+def length_instruction(target_chars: int, fit_pages: bool) -> str:
+    """Length as a number of characters, from the slider in the editor."""
+    n = int(target_chars)
+    text = (
+        f"Length: aim for about {n} characters of text the reader sees, including "
+        f"spaces (roughly {max(1, round(n / 6.5))} words), and stay within 15% of that. "
+        "HTML tags do not count. Fit the depth of detail to this length: fewer, "
+        "tighter points for a short text, more explanation for a long one. Never "
+        "pad, and never drop a fact from the notes to reach the length."
+    )
+    if fit_pages:
+        pages = max(1, math.ceil(n / PAGE_CHARS))
+        text += (
+            " The text is published in WebManuals, where a page holds about "
+            f"{PAGE_CHARS} characters of running text and does not break by itself: "
+            "anything beyond the page is not printed. Headings, bullets with their "
+            "blank lines, and Note/Caution/Warning boxes take more room than their "
+            "characters."
+        )
+        if pages == 1:
+            text += " The whole text must fit on one page."
+        else:
+            text += (
+                f" It will be split into {pages} pages. Let a heading fall roughly "
+                f"every {PAGE_CHARS - 500} characters so each page can start with one, "
+                "and keep each list or box short enough to stay on one page."
+            )
+    return text
+
+
 def build_style_block(structure: str = None, tone: str = None,
-                      audience: str = None, length: str = None) -> str:
+                      audience: str = None, length: str = None,
+                      target_chars: int = None, fit_pages: bool = False) -> str:
     s = STYLE_STRUCTURE.get(structure or STYLE_DEFAULTS["structure"], "")
     t = STYLE_TONE.get(tone or STYLE_DEFAULTS["tone"], "")
     a = STYLE_AUDIENCE.get(audience or STYLE_DEFAULTS["audience"], "")
-    l = STYLE_LENGTH.get(length or STYLE_DEFAULTS["length"], "")
+    l = (length_instruction(target_chars, fit_pages) if target_chars
+         else STYLE_LENGTH.get(length or STYLE_DEFAULTS["length"], ""))
     parts = [x for x in [s, t, a, l] if x]
     if not parts:
         return ""
@@ -263,7 +299,8 @@ def load_rules(path: str = "APM_rules.json") -> list:
 def build_system_prompt(rules: list, include_process: bool = False,
                         target: str = "html",
                         structure: str = None, tone: str = None,
-                        audience: str = None, length: str = None) -> str:
+                        audience: str = None, length: str = None,
+                        target_chars: int = None, fit_pages: bool = False) -> str:
     groups: dict = {}
     for r in rules:
         if r["category"] == "process" and not include_process:
@@ -273,7 +310,8 @@ def build_system_prompt(rules: list, include_process: bool = False,
     lines = [PREAMBLE]
 
     # Style modifiers come first so they frame how the rules are applied
-    style_block = build_style_block(structure, tone, audience, length)
+    style_block = build_style_block(structure, tone, audience, length,
+                                    target_chars, fit_pages)
     if style_block:
         lines.append(style_block)
 

@@ -15,6 +15,13 @@
 > removed on 2 October 2026. Rosie works from the editor's notes and the 84
 > APM rules only. `VOYAGE_API_KEY`, `SUPABASE_URL` and `SUPABASE_KEY` are no
 > longer used.
+>
+> **Length and WebManuals pages.** The editor sets the length with a slider
+> (`target_chars`). With "Fit to WebManuals pages" (`fit_pages`) Rosie plans
+> for whole pages, tightens a draft that runs over (up to twice), and the
+> response lists where each page ends (`pages`). A WebManuals page holds
+> about 3000 characters of running text; the page model and its calibration
+> live in `pages.py`.
 
 Editors enter rough notes → the tool generates style-compliant manual content,
 verified against all 84 rules from APM chapters 1 and 3.2.

@@ -15,6 +15,7 @@ Optional:
   APM_MODEL           — defaults to claude-sonnet-4-6
 """
 
+import math
 import os
 import logging
 from pathlib import Path
@@ -23,11 +24,12 @@ from typing import List, Optional
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from anthropic import Anthropic
 
 from prompt_builder import load_rules, build_system_prompt
 from checker import run_checks, format_violations
+from pages import PAGE_CHARS, paginate, visible_chars
 
 log = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
@@ -73,13 +75,17 @@ class GenerateRequest(BaseModel):
     structure: Optional[str] = None
     tone:      Optional[str] = None
     audience:  Optional[str] = None
-    length:    Optional[str] = None
+    length:    Optional[str] = None   # old page: concise / standard / comprehensive
+    target_chars: Optional[int] = Field(None, ge=200, le=20000)  # length slider
+    fit_pages: bool = False   # keep within whole WebManuals pages
 
 
 class GenerateResponse(BaseModel):
     draft:      str
     violations: List[dict]
     iterations: int
+    chars:      int = 0
+    pages:      List[dict] = []   # where WebManuals pages end; see pages.py
 
 
 def _call(system: str, messages: List[dict]) -> str:
@@ -102,6 +108,8 @@ def generate(req: GenerateRequest):
         tone      = req.tone,
         audience  = req.audience,
         length    = req.length,
+        target_chars = req.target_chars,
+        fit_pages = req.fit_pages,
     )
 
     # ── 2. Generate ───────────────────────────────────────────────────────
@@ -128,8 +136,37 @@ def generate(req: GenerateRequest):
         violations = run_checks(draft, RULES)
         iterations += 1
 
+    # ── 4. Fit to WebManuals pages ───────────────────────────────────────
+    # A page that runs over is cut off in print, so a draft meant for N pages
+    # that needs more is tightened, at most twice.
+    pages = paginate(draft) if req.target != "text" else []
+    if req.fit_pages and req.target != "text":
+        want = max(1, math.ceil((req.target_chars or PAGE_CHARS) / PAGE_CHARS))
+        tries = 0
+        while len(pages) > want and tries < 2:
+            over = sum(p["chars"] for p in pages[want:])
+            messages.append({"role": "assistant", "content": draft})
+            messages.append({
+                "role": "user",
+                "content": (
+                    f"This is too long for {want} WebManuals page"
+                    f"{'s' if want > 1 else ''}: about {over + 150} characters "
+                    "must go. Tighten the wording, merge points and drop "
+                    "repetition, but keep every fact, figure, reference and "
+                    "[TO CONFIRM] marker, and keep all house-style rules. Return "
+                    "the full corrected content with no commentary."
+                ),
+            })
+            draft = _call(system, messages)
+            violations = run_checks(draft, RULES)
+            pages = paginate(draft)
+            tries += 1
+            iterations += 1
+
     return GenerateResponse(
         draft      = draft,
         violations = violations,
         iterations = iterations,
+        chars      = visible_chars(draft),
+        pages      = pages,
     )

@@ -53,11 +53,68 @@ const AUDIENCE = [
   { v: "cabin_crew", label: "Cabin crew" },
   { v: "ground_staff", label: "Ground staff" },
 ];
-const LENGTH = [
-  { v: "concise", label: "Concise" },
-  { v: "standard", label: "Standard" },
-  { v: "comprehensive", label: "Comprehensive" },
-];
+// One WebManuals page holds about this much running text and does not break
+// by itself (measured by S&P on a text-only page). Mirrors PAGE_CHARS in apm/pages.py.
+const PAGE_CHARS = 3000;
+const LEN_MIN = 300;
+const LEN_MAX = 9000;
+
+const pagesLabel = (n) => {
+  const p = n / PAGE_CHARS;
+  if (p < 0.2) return "a short paragraph or two";
+  if (p < 0.4) return "about a quarter of a page";
+  if (p < 0.65) return "about half a page";
+  if (p < 0.9) return "about three quarters of a page";
+  if (p <= 1.05) return "about one page";
+  return `about ${Math.round(p * 2) / 2} pages`.replace(".5", "\u00bd");
+};
+
+function LengthSlider({ value, onChange, fit, onFit }) {
+  return (
+    <div className="apm-length">
+      <div className="apm-lenhead">
+        <span className="hint block">Length</span>
+        <span className="apm-lenval">
+          <b>{value.toLocaleString("de-CH")}</b> characters &middot; {pagesLabel(value)}
+        </span>
+      </div>
+      <input
+        type="range"
+        id="apm-length"
+        min={LEN_MIN}
+        max={LEN_MAX}
+        step={100}
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        aria-label="Length in characters"
+        list="apm-length-marks"
+      />
+      <datalist id="apm-length-marks">
+        <option value={PAGE_CHARS} />
+        <option value={PAGE_CHARS * 2} />
+      </datalist>
+      <div className="apm-lenscale" aria-hidden="true">
+        <span>Short</span>
+        <span style={{ left: `${((PAGE_CHARS - LEN_MIN) / (LEN_MAX - LEN_MIN)) * 100}%` }}>1 page</span>
+        <span style={{ left: `${((PAGE_CHARS * 2 - LEN_MIN) / (LEN_MAX - LEN_MIN)) * 100}%` }}>2 pages</span>
+        <span>3 pages</span>
+      </div>
+      <label className="apm-fit">
+        <input type="checkbox" id="apm-fit" checked={fit} onChange={(e) => onFit(e.target.checked)} />
+        <span>
+          <b>Fit to WebManuals pages</b>
+          <span className="hint block">
+            WebManuals does not break pages and cuts off what runs over. Rosie keeps the
+            text within {Math.max(1, Math.ceil(value / PAGE_CHARS))} page
+            {Math.ceil(value / PAGE_CHARS) > 1 ? "s and shows where each page ends" : ""}, and
+            tightens it if it runs over.
+          </span>
+        </span>
+      </label>
+    </div>
+  );
+}
+
 const TARGET = [
   { v: "html", label: "HTML for WebManuals" },
   { v: "text", label: "Plain text" },
@@ -132,6 +189,19 @@ function legacyCopy(html) {
   }
 }
 
+/** How full a WebManuals page is. */
+function Fill({ value }) {
+  const pct = Math.round(value * 100);
+  return (
+    <span className={"apm-fill" + (pct > 100 ? " over" : pct > 92 ? " near" : "")} title="Share of a WebManuals page">
+      <span className="apm-fillbar">
+        <i style={{ width: Math.min(100, pct) + "%" }} />
+      </span>
+      {pct}% of a page
+    </span>
+  );
+}
+
 const SEVERITY = { error: "Error", warning: "Warning", info: "Note" };
 
 // ---------- writing ----------
@@ -142,7 +212,8 @@ function Writer({ notify }) {
     structure: "mixed",
     tone: "balanced",
     audience: "flight_crew",
-    length: "standard",
+    target_chars: 1500,
+    fit_pages: true,
     target: "html",
   });
   const [busy, setBusy] = useState(false);
@@ -170,18 +241,19 @@ function Writer({ notify }) {
 
   // Formatted copy for pasting into WebManuals: only the draft's own HTML goes
   // to the clipboard, never the fonts and sizes this page displays it with.
-  const copyFormatted = async () => {
+  const copyFormatted = async (page) => {
+    const src = page == null ? html : pageHtml[page];
     try {
       if (res.target !== "html") await navigator.clipboard.writeText(res.draft);
       else if (window.ClipboardItem && navigator.clipboard.write)
         await navigator.clipboard.write([
           new ClipboardItem({
-            "text/html": new Blob([forPaste(html)], { type: "text/html" }),
-            "text/plain": new Blob([htmlToText(html)], { type: "text/plain" }),
+            "text/html": new Blob([forPaste(src)], { type: "text/html" }),
+            "text/plain": new Blob([htmlToText(src)], { type: "text/plain" }),
           }),
         ]);
-      else legacyCopy(forPaste(html));
-      done("formatted");
+      else legacyCopy(forPaste(src));
+      done(page == null ? "formatted" : "formatted" + page);
     } catch {
       notify("Copying failed. Select the text and copy it by hand.");
     }
@@ -208,6 +280,8 @@ function Writer({ notify }) {
   };
 
   const html = useMemo(() => (res && res.target === "html" ? clean(res.draft) : ""), [res]);
+  const pages = (res && res.target === "html" && res.pages) || [];
+  const pageHtml = useMemo(() => pages.map((p) => clean(p.html)), [res]);
   const v = res?.violations || [];
   const count = (s) => v.filter((x) => x.severity === s).length;
 
@@ -236,12 +310,15 @@ function Writer({ notify }) {
           <div className="grid g2">
             <Segmented label="Structure" options={STRUCTURE} value={opts.structure} onChange={set("structure")} />
             <Segmented label="Tone" options={TONE} value={opts.tone} onChange={set("tone")} />
-            <Segmented label="Length" options={LENGTH} value={opts.length} onChange={set("length")} />
+            <Segmented label="Audience" options={AUDIENCE} value={opts.audience} onChange={set("audience")} />
             <Segmented label="Output" options={TARGET} value={opts.target} onChange={set("target")} />
           </div>
-          <div className="mt10">
-            <Segmented label="Audience" options={AUDIENCE} value={opts.audience} onChange={set("audience")} />
-          </div>
+          <LengthSlider
+            value={opts.target_chars}
+            onChange={set("target_chars")}
+            fit={opts.fit_pages}
+            onFit={set("fit_pages")}
+          />
         </fieldset>
 
         <div className="apm-go">
@@ -264,9 +341,16 @@ function Writer({ notify }) {
           </div>
         ) : (
           <>
+            {pages.length > 1 && (
+              <div className="apm-pagenote">
+                This text needs <b>{pages.length} WebManuals pages</b>. Paste each page
+                separately with its own copy button.
+              </div>
+            )}
             <div className="apm-paper">
               <div className="apm-paperbar">
-                <span className="apm-label">Draft</span>
+                <span className="apm-label">{pages.length > 1 ? `Page 1 of ${pages.length}` : "Draft"}</span>
+                {pages[0] && <Fill value={pages[0].fill} />}
                 <span className="spacer" />
                 {res.target === "html" && (
                   <button
@@ -279,22 +363,47 @@ function Writer({ notify }) {
                 )}
                 <button
                   className="btn primary small"
-                  onClick={copyFormatted}
+                  onClick={() => copyFormatted(pages.length > 1 ? 0 : null)}
                   title="Paste straight into WebManuals; it takes WebManuals' own fonts"
                 >
-                  {copied === "formatted" ? "Copied" : res.target === "html" ? "Copy for WebManuals" : "Copy text"}
+                  {copied === "formatted0" || (copied === "formatted" && pages.length < 2)
+                    ? "Copied"
+                    : res.target !== "html"
+                      ? "Copy text"
+                      : pages.length > 1
+                        ? "Copy page 1"
+                        : "Copy for WebManuals"}
                 </button>
               </div>
               {res.target === "html" ? (
                 <div
                   className="apm-draft"
                   onCopy={onCopySelection}
-                  dangerouslySetInnerHTML={{ __html: html }}
+                  dangerouslySetInnerHTML={{ __html: pages.length > 1 ? pageHtml[0] : html }}
                 />
               ) : (
                 <pre className="apm-draft plain">{res.draft}</pre>
               )}
             </div>
+            {pages.slice(1).map((pg, k) => (
+              <div className="apm-paper" key={k + 1}>
+                <div className="apm-paperbar">
+                  <span className="apm-label">
+                    Page {k + 2} of {pages.length}
+                  </span>
+                  <Fill value={pg.fill} />
+                  <span className="spacer" />
+                  <button className="btn primary small" onClick={() => copyFormatted(k + 1)}>
+                    {copied === "formatted" + (k + 1) ? "Copied" : `Copy page ${k + 2}`}
+                  </button>
+                </div>
+                <div
+                  className="apm-draft"
+                  onCopy={onCopySelection}
+                  dangerouslySetInnerHTML={{ __html: pageHtml[k + 1] }}
+                />
+              </div>
+            ))}
 
             <div className="apm-card">
               <div className="apm-cardhead">
