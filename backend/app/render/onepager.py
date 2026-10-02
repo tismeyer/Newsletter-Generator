@@ -114,11 +114,15 @@ def _fill_card(cell, card: RenderedCard, width: int, size: float) -> None:
     bullet_numpr = getattr(cell, "_bullet_numpr", None)
     for block in card.blocks:
         if block.kind == "bullets":
-            for item in block.items:
+            for k, item in enumerate(block.items):
                 p = cell.add_paragraph(item)
                 X.set_style(p, "CardBody")
                 X.apply_numpr(p, bullet_numpr)
                 X.set_size(p, size)
+                # bullets sit close together; the list as a whole keeps the
+                # paragraph gap after its last item
+                if k < len(block.items) - 1:
+                    p.paragraph_format.space_after = Pt(1)
         elif block.kind == "body":
             for line in [t for t in block.text.split("\n") if t.strip()]:
                 p = cell.add_paragraph(line.strip())
