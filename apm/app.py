@@ -80,6 +80,9 @@ class GenerateRequest(BaseModel):
     target_chars: Optional[int] = Field(None, ge=200, le=20000)  # length slider
     fit_pages: bool = False   # keep within whole WebManuals pages
     sources: Literal["notes", "general"] = "notes"   # general: background knowledge allowed
+    # Revising: the draft shown to the editor and what they want changed.
+    current:     Optional[str] = None
+    instruction: Optional[str] = Field(None, max_length=2000)
 
 
 class GenerateResponse(BaseModel):
@@ -131,6 +134,21 @@ def generate(req: GenerateRequest):
 
     # ── 2. Generate ───────────────────────────────────────────────────────
     messages   = [{"role": "user", "content": f"Editor's notes and instructions:\n{req.notes}"}]
+    if req.current and req.instruction and req.instruction.strip():
+        # A revision continues the conversation the draft came from.
+        messages.append({"role": "assistant", "content": req.current})
+        messages.append({
+            "role": "user",
+            "content": (
+                "Revise the content as the editor asks:\n" + req.instruction.strip() +
+                "\n\nChange only what this asks for and keep everything else as it is, "
+                "including every [TO CONFIRM] marker the request does not resolve, and "
+                "keep all house-style rules. Return the full revised content with no "
+                "commentary." +
+                (" End with the ADDED comment covering the whole revised text."
+                 if req.sources == "general" else "")
+            ),
+        })
     added: List[str] = []
     draft      = _call(system, messages)
     draft, a   = _split_added(draft)

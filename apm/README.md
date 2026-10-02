@@ -153,6 +153,12 @@ The editor always sees the original notes beside the draft so they can
 verify nothing was invented. The AI is instructed to insert `[TO CONFIRM]`
 for anything not present in the notes.
 
+### Asking for changes
+
+`/generate` with `current` (the draft on screen) and `instruction` (what the
+editor wants changed) revises that draft instead of starting over. The style
+checks and the page fit run again on the result.
+
 ### Content: notes only, or notes plus general knowledge
 
 `sources` on `/generate` chooses what Rosie may use:

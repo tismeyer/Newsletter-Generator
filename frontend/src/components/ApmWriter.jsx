@@ -224,6 +224,8 @@ function Writer({ notify }) {
   const [busy, setBusy] = useState(false);
   const [res, setRes] = useState(null); // {draft, violations, iterations, target}
   const [copied, setCopied] = useState("");
+  const [ask, setAsk] = useState("");
+  const [prev, setPrev] = useState(null); // the draft before the last revision, for undo
   const set = (k) => (v) => setOpts((o) => ({ ...o, [k]: v }));
 
   const generate = async () => {
@@ -232,6 +234,32 @@ function Writer({ notify }) {
     try {
       const r = await postJSON("/generate", { notes: notes.trim(), ...opts });
       setRes({ ...r, target: opts.target, sources: opts.sources });
+      setPrev(null);
+    } catch (e) {
+      notify(e.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // Ask Rosie for changes to the draft on screen. Her checks and the page fit
+  // run again on the revised text.
+  const revise = async () => {
+    if (!ask.trim() || busy || !res) return;
+    setBusy(true);
+    try {
+      const r = await postJSON("/generate", {
+        notes: notes.trim() || "(no notes)",
+        ...opts,
+        target: res.target,
+        sources: res.sources,
+        current: res.draft,
+        instruction: ask.trim(),
+      });
+      setPrev(res);
+      setRes({ ...r, target: res.target, sources: res.sources });
+      setAsk("");
+      notify("Text revised.");
     } catch (e) {
       notify(e.message);
     } finally {
@@ -421,6 +449,44 @@ function Writer({ notify }) {
                 />
               </div>
             ))}
+
+            <div className="apm-card apm-revise">
+              <div className="apm-cardhead">
+                <b>Ask Rosie for changes</b>
+                <span className="spacer" />
+                {prev && (
+                  <button
+                    type="button"
+                    className="btn link"
+                    disabled={busy}
+                    onClick={() => {
+                      setRes(prev);
+                      setPrev(null);
+                    }}
+                  >
+                    Undo last change
+                  </button>
+                )}
+              </div>
+              <div className="revise-row">
+                <input
+                  type="text"
+                  value={ask}
+                  disabled={busy}
+                  placeholder="e.g. “shorter”, “add a Caution about tailwind”, “turn the second paragraph into bullets”"
+                  aria-label="Ask Rosie for changes to this text"
+                  onChange={(e) => setAsk(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && revise()}
+                />
+                <button type="button" className="btn small" disabled={busy || !ask.trim()} onClick={revise}>
+                  {busy ? "Revising…" : "Revise"}
+                </button>
+              </div>
+              <span className="hint">
+                Rosie changes only what you ask, then checks the style rules
+                {opts.fit_pages && res.target === "html" ? " and the page fit" : ""} again.
+              </span>
+            </div>
 
             {res.sources === "general" && (
               <div className="apm-card apm-added">

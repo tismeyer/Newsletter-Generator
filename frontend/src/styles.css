@@ -529,3 +529,5 @@ textarea.inline-field.grow{display:block;resize:none;overflow:hidden;min-height:
 .paper.word .p-box .bt{font-size:12px;line-height:1.15;letter-spacing:1.3px;margin-bottom:5.3px}
 .paper.word .p-box p{font-size:13.3px;line-height:1.29;margin:0 0 4px}
 .p-measure{position:absolute;left:-10000px;top:0;visibility:hidden;pointer-events:none}
+.apm-revise{display:flex;flex-direction:column;gap:8px}
+.apm-revise .revise-row{display:flex;gap:8px}
