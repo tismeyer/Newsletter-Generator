@@ -111,6 +111,18 @@ class NewsItem(BaseModel):
         return bool(self.label.strip() or self.text.strip())
 
 
+class Movements(BaseModel):
+    """The optional entries/exits row at the foot of the one-page layout.
+    Names are printed as typed; no AI touches them."""
+
+    entries: str = ""
+    exits: str = ""
+
+    @property
+    def filled(self) -> bool:
+        return bool(self.entries.strip() or self.exits.strip())
+
+
 class Masthead(BaseModel):
     header_kicker: str
     doc_type: str = "Newsletter"
@@ -149,7 +161,8 @@ class DocumentRequest(BaseModel):
     # one-pager layout
     cards: list[Card] = Field(default_factory=list)
     news: list[NewsItem] = Field(default_factory=list)
-    provider: Literal["claude", "copilot", "manual"] | None = None
+    moves: Movements | None = None   # None: the entries/exits row is off
+    provider: Literal["claude", "azure", "copilot", "manual"] | None = None
 
     @field_validator("cards")
     @classmethod
@@ -224,6 +237,7 @@ class RenderRequest(BaseModel):
     chapters: list[RenderedChapter] = Field(default_factory=list)
     cards: list[RenderedCard] = Field(default_factory=list)
     news: list[RenderedNews] = Field(default_factory=list)
+    moves: Movements | None = None
 
 
 class ReviseRequest(BaseModel):

@@ -20,7 +20,7 @@ from docx.oxml.ns import qn
 from docx.shared import Pt, RGBColor, Twips
 
 from ..budget import card_rows, fit_size, is_full_width
-from ..schemas import Masthead, RenderedCard, RenderedNews
+from ..schemas import Masthead, Movements, RenderedCard, RenderedNews
 from . import docxutil as X
 
 ASSETS = Path(__file__).resolve().parent.parent / "assets"
@@ -208,6 +208,39 @@ def _news_table(doc, news: list[RenderedNews], size: float) -> None:
             X.set_size(p, size)
 
 
+def _moves_row(doc, moves: Movements, size: float) -> None:
+    """Entries and exits side by side in one row at the foot of the page:
+    icon, red label, then the names as typed."""
+    # A paragraph must separate two tables in Word; kept small, it is the gap.
+    gap_p = doc.add_paragraph()
+    gap_p.paragraph_format.space_after = Pt(0)
+    gap_p.paragraph_format.line_spacing = Pt(6)
+    table = doc.add_table(rows=1, cols=3)
+    X.table_no_borders(table)
+    table.autofit = False
+    X.fixed_columns(table, [HALF, GAP, HALF])
+    row = table.rows[0]
+    X.row_cannot_split(row)
+    left, gap, right = row.cells
+    X.clear_borders(gap)
+    for cell, icon, label, text in (
+        (left, "entries", "Entries", moves.entries),
+        (right, "exits", "Exits", moves.exits),
+    ):
+        X.cell_borders(cell, top=CARD_LINE, bottom=CARD_LINE, size=4)
+        X.cell_margins(cell, top=62, bottom=62, left=0, right=0)
+        cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
+        head = _icon_header(cell, icon, NEWS_ICON_PT, HALF)
+        p = head.paragraphs[0]
+        X.set_style(p, "NewsBody")
+        tag = p.add_run(label.upper() + "\u2002")
+        tag.bold = True
+        tag.font.color.rgb = RGBColor.from_string(RED)
+        p.add_run(" ".join(text.split()) or "\u2013")
+        X.set_size(p, size)
+        _ensure_trailing_paragraph(cell)
+
+
 def _paragraphs(card: RenderedCard) -> list[tuple[str, bool]]:
     """A card's body as (text, is_bullet) pairs, for fit_size."""
     out: list[tuple[str, bool]] = []
@@ -222,7 +255,10 @@ def _paragraphs(card: RenderedCard) -> list[tuple[str, bool]]:
 
 
 def render_one_pager(
-    masthead: Masthead, cards: list[RenderedCard], news: list[RenderedNews]
+    masthead: Masthead,
+    cards: list[RenderedCard],
+    news: list[RenderedNews],
+    moves: Movements | None = None,
 ) -> bytes:
     doc = Document(str(TEMPLATE))
     bullet_numpr = X.find_bullet_numpr(doc)
@@ -254,9 +290,12 @@ def render_one_pager(
     size = fit_size(
         [_paragraphs(c) for c in usable_cards],
         [[l for l in n.lines if l.strip()] for n in usable_news],
+        moves=moves is not None,
     )
     _card_tables(doc, usable_cards, bullet_numpr, size)
     _news_table(doc, usable_news, size)
+    if moves is not None:
+        _moves_row(doc, moves, size)
 
     buf = io.BytesIO()
     doc.save(buf)

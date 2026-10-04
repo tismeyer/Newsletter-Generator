@@ -203,6 +203,19 @@ function OnePagerPreview({ state }) {
           ))}
         </div>
       )}
+      {state.moves?.on && (
+        <div className="p-moves">
+          {[["entries", "Entries"], ["exits", "Exits"]].map(([k, label]) => (
+            <div className="p-move" key={k}>
+              <img className="p-icon" src={ICON_SRC[k]} alt="" />
+              <p>
+                <b>{label}</b>{" "}
+                {state.moves[k].trim() || <span className="p-ghost">&ndash;</span>}
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

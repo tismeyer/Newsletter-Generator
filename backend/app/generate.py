@@ -160,10 +160,11 @@ async def build_one_pager(req: DocumentRequest, provider: Provider):
     if not cards and not news:
         raise GenerationError("Fill at least one card or one short-news row.")
 
-    limits = compute_budget(len(cards), len(news))
+    moves = bool(req.moves)
+    limits = compute_budget(len(cards), len(news), moves)
 
     async def one_card(index: int, card: Card) -> RenderedCard:
-        limit = card_limit(index, len(cards), len(news))
+        limit = card_limit(index, len(cards), len(news), moves)
         text, used = await _box_text(
             provider, card.treatment, card.text, card.title, req.style, limit
         )

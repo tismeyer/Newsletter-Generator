@@ -127,7 +127,7 @@ async def render(req: RenderRequest) -> Response:
     """Build the .docx from reviewed text."""
     try:
         if req.layout is Layout.ONE_PAGER:
-            data = render_one_pager(req.masthead, req.cards, req.news)
+            data = render_one_pager(req.masthead, req.cards, req.news, req.moves)
         else:
             data = render_document(req.masthead, req.chapters)
     except Exception as e:  # noqa: BLE001 - surfaced to the editor as a message
@@ -148,4 +148,5 @@ async def document(req: DocumentRequest) -> Response:
     return await render(RenderRequest(
         masthead=drafted.masthead, layout=drafted.layout,
         chapters=drafted.chapters, cards=drafted.cards, news=drafted.news,
+        moves=req.moves,
     ))

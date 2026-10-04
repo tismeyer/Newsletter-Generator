@@ -141,6 +141,8 @@ export const emptyState = () => ({
   layout: "standard",
   cards: [newCard("warn"), newCard("star"), newCard("gear"), newCard("info")],
   news: [newNews("smile"), newNews("heart"), newNews("check")],
+  // The entries/exits row at the foot of the one-page layout; off unless asked for.
+  moves: { on: false, entries: "", exits: "" },
   provider: "claude",
   // Set by a Word import: what came in, and where the AI was unsure.
   importInfo: null,
@@ -345,6 +347,7 @@ export function toPayload(s) {
       text: hasDraft(n) ? n.draft : n.text,
       treatment: hasDraft(n) ? "verbatim" : n.treatment,
     })),
+    moves: s.moves?.on ? { entries: s.moves.entries, exits: s.moves.exits } : null,
   };
 }
 
@@ -363,7 +366,11 @@ function cardParagraphs(c) {
 export function onePagerSize(s) {
   const lines = (n) =>
     (hasDraft(n) ? n.draft : n.text).split("\n").map((l) => l.trim()).filter(Boolean);
-  return fitSize(s.cards.filter(cardFilled).map(cardParagraphs), s.news.filter(newsFilled).map(lines));
+  return fitSize(
+    s.cards.filter(cardFilled).map(cardParagraphs),
+    s.news.filter(newsFilled).map(lines),
+    Boolean(s.moves?.on)
+  );
 }
 
 // ---------- Word import ----------

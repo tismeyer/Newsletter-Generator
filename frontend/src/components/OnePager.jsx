@@ -1,6 +1,7 @@
 import { FlagNotes, GrowText, flagCls, unflag } from "./Bits.jsx";
 import ReviseBar from "./DraftTools.jsx";
 import IconButton from "./IconButton.jsx";
+import { ICON_SRC } from "../icons.js";
 import {
   TREATMENTS,
   TREATMENT_COPY,
@@ -43,7 +44,7 @@ const setter = (x, onChange) => (k, v) =>
 function Card({ card, index, activeCards, activeNews, ctx, onChange, onClear }) {
   const set = setter(card, onChange);
   const flags = card.flags;
-  const limit = cardLimit(index, Math.max(activeCards, 1), activeNews);
+  const limit = cardLimit(index, Math.max(activeCards, 1), activeNews, ctx.moves);
   const filled = cardFilled(card);
   const full = filled && isFullWidth(index, activeCards);
   const copy = TREATMENT_COPY[card.treatment];
@@ -214,9 +215,11 @@ function NewsRow({ item, index, limit, ctx, onChange, onClear }) {
 
 export default function OnePager({ state, patch, notify }) {
   const ctx = { style: state.style, provider: state.provider, notify };
+  const moves = state.moves || { on: false, entries: "", exits: "" };
+  const setMoves = (m) => patch({ moves: { ...moves, ...m } });
   const activeCards = state.cards.filter(cardFilled).length;
   const activeNews = state.news.filter(newsFilled).length;
-  const b = budget(Math.max(activeCards, 1), activeNews);
+  const b = budget(Math.max(activeCards, 1), activeNews, moves.on);
 
   const setCard = (i, c) => patch({ cards: state.cards.map((x, j) => (j === i ? c : x)) });
   const setNews = (i, n) => patch({ news: state.news.map((x, j) => (j === i ? n : x)) });
@@ -246,7 +249,7 @@ export default function OnePager({ state, patch, notify }) {
             index={i}
             activeCards={activeCards}
             activeNews={activeNews}
-            ctx={ctx}
+            ctx={{ ...ctx, moves: moves.on }}
             onChange={(nc) => setCard(i, nc)}
             onClear={() =>
               setCard(i, { ...c, title: "", subtitle: "", text: "", draft: null, draftFrom: "", flags: {} })
@@ -277,6 +280,37 @@ export default function OnePager({ state, patch, notify }) {
           />
         ))}
         </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Entries and exits</legend>
+        <label className="check">
+          <input type="checkbox" checked={moves.on} onChange={(e) => setMoves({ on: e.target.checked })} />
+          <span>Add an entries and exits row at the foot of the page</span>
+        </label>
+        {moves.on && (
+          <div className="ed-paper ed-moves">
+            {[
+              ["entries", "Entries", "e.g. Anna Muster (F/O), Ben Beispiel (CC)"],
+              ["exits", "Exits", "e.g. Carla Test (CPT)"],
+            ].map(([k, label, ph]) => (
+              <div className="ed-move" key={k}>
+                <img className="ed-moveicon" src={ICON_SRC[k]} alt="" />
+                <b>{label}</b>
+                <GrowText
+                  className="ed-movetext"
+                  value={moves[k]}
+                  onChange={(v) => setMoves({ [k]: v.replace(/\n/g, " ") })}
+                  placeholder={ph}
+                  ariaLabel={label}
+                />
+              </div>
+            ))}
+          </div>
+        )}
+        <p className="hint">
+          Names are printed exactly as typed. The row takes about one line of space from the cards.
+        </p>
       </fieldset>
     </>
   );

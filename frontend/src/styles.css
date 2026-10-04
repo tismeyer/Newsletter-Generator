@@ -531,3 +531,18 @@ textarea.inline-field.grow{display:block;resize:none;overflow:hidden;min-height:
 .p-measure{position:absolute;left:-10000px;top:0;visibility:hidden;pointer-events:none}
 .apm-revise{display:flex;flex-direction:column;gap:8px}
 .apm-revise .revise-row{display:flex;gap:8px}
+
+/* --- one-page layout: entries and exits row --- */
+label.check{display:flex;gap:9px;align-items:center;cursor:pointer;font-size:13px;margin-bottom:8px}
+label.check input{accent-color:var(--navy)}
+.ed-moves{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:6px}
+@media (max-width:640px){ .ed-moves{grid-template-columns:1fr} }
+.ed-move{display:flex;align-items:center;gap:8px;min-width:0}
+.ed-move b{color:#E4032E;text-transform:uppercase;letter-spacing:.1em;font-size:11.5px}
+.ed-moveicon{width:24px;height:24px;flex:none}
+.ed-movetext{flex:1;min-width:0;font-size:12.5px}
+.p-moves{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px}
+.p-move{display:flex;align-items:center;gap:9px;padding:6px 0;border-top:1px solid #DDE0E2;border-bottom:1px solid #DDE0E2}
+.p-move .p-icon{width:24px;height:24px}
+.p-move p{margin:0;font-size:var(--fs);line-height:1.3}
+.p-move b{color:#E4032E;text-transform:uppercase;letter-spacing:.08em;margin-right:4px}

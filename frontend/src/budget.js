@@ -26,6 +26,9 @@ const CHARS_PER_LINE_FULL = 105;
 const CHARS_PER_LINE_NEWS = 90;
 const NEWS_LINES = 3;
 
+// The optional entries/exits row, reserved whole when switched on (MOVES_ROW_CM in budget.py).
+const MOVES_ROW_CM = 1.3;
+
 export const MAX_CARDS = 4;
 export const MAX_NEWS = 3;
 
@@ -35,13 +38,14 @@ export const cardRows = (n) => Math.floor((n + 1) / 2);
 export const isFullWidth = (index, activeCards) =>
   activeCards % 2 === 1 && index === activeCards - 1;
 
-export function budget(activeCards, activeNews) {
+export function budget(activeCards, activeNews, moves = false) {
   const cards = Math.max(0, Math.min(activeCards, MAX_CARDS));
   const news = Math.max(0, Math.min(activeNews, MAX_NEWS));
   const rows = cardRows(cards);
 
   const overhead =
-    TITLE_BLOCK_CM + rows * CARD_ROW_OVERHEAD_CM + news * NEWS_ROW_OVERHEAD_CM;
+    TITLE_BLOCK_CM + rows * CARD_ROW_OVERHEAD_CM + news * NEWS_ROW_OVERHEAD_CM +
+    (moves ? MOVES_ROW_CM : 0);
   // Allowances assume the smallest size, so text within them always fits.
   const totalLines = Math.floor(Math.max(0, PAGE_BODY_CM - overhead) / lineCm(MIN_PT));
   const cardLines = Math.max(0, totalLines - news * NEWS_LINES);
@@ -78,12 +82,12 @@ const newsCm = (rowLines, size) => {
  * backend/app/budget.py. `cards` holds [text, isBullet] pairs per card,
  * `news` the text lines per row.
  */
-export function fitSize(cards, news) {
+export function fitSize(cards, news, moves = false) {
   const n = cards.length;
   for (let size = MAX_PT; size >= MIN_PT; size -= STEP_PT) {
     // The card heading (title and subtitle) grows with the text as well.
     const row = CARD_ROW_OVERHEAD_CM + 2 * (lineCm(size) - lineCm(BASE_PT));
-    let total = TITLE_BLOCK_CM;
+    let total = TITLE_BLOCK_CM + (moves ? MOVES_ROW_CM : 0);
     for (let i = 0; i < n; ) {
       if (isFullWidth(i, n)) {
         total += row + cardCm(cards[i], true, size);
@@ -100,7 +104,7 @@ export function fitSize(cards, news) {
   return MIN_PT;
 }
 
-export function cardLimit(index, activeCards, activeNews) {
-  const b = budget(activeCards, activeNews);
+export function cardLimit(index, activeCards, activeNews, moves = false) {
+  const b = budget(activeCards, activeNews, moves);
   return isFullWidth(index, activeCards) ? b.card_full : b.card_half;
 }

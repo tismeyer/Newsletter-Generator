@@ -33,6 +33,10 @@ CHARS_PER_LINE_FULL = 105    # a card spanning the full width
 CHARS_PER_LINE_NEWS = 90     # the text column of a short-news row
 NEWS_LINES = 3               # lines allowed per short-news item
 
+# The optional entries/exits row: one line of text beside a 24 pt icon,
+# with its padding and rules. Reserved whole whenever the row is switched on.
+MOVES_ROW_CM = 1.3
+
 MAX_CARDS = 4
 MAX_NEWS = 3
 
@@ -55,7 +59,7 @@ def chars_per_line(base_chars: int, size_pt: float) -> float:
     return base_chars * BASE_PT / size_pt
 
 
-def budget(active_cards: int, active_news: int) -> dict:
+def budget(active_cards: int, active_news: int, moves: bool = False) -> dict:
     """Return the per-box character allowances for this combination.
 
     Fewer boxes means more room for the ones that remain, which is why the
@@ -69,6 +73,7 @@ def budget(active_cards: int, active_news: int) -> dict:
         TITLE_BLOCK_CM
         + rows * CARD_ROW_OVERHEAD_CM
         + active_news * NEWS_ROW_OVERHEAD_CM
+        + (MOVES_ROW_CM if moves else 0.0)
     )
     # Allowances assume the smallest size, so text within them always fits.
     usable_cm = max(0.0, PAGE_BODY_CM - overhead)
@@ -107,7 +112,9 @@ def _news_cm(lines: list[str], size: float) -> float:
     return max(h, NEWS_ICON_CM) + NEWS_ROW_OVERHEAD_CM
 
 
-def fit_size(cards: list[list[tuple[str, bool]]], news: list[list[str]]) -> float:
+def fit_size(
+    cards: list[list[tuple[str, bool]]], news: list[list[str]], moves: bool = False
+) -> float:
     """The largest text size, MIN_PT..MAX_PT, at which everything fits the page.
 
     One size for every card and short-news row, so the page reads as one
@@ -120,7 +127,7 @@ def fit_size(cards: list[list[tuple[str, bool]]], news: list[list[str]]) -> floa
     while size >= MIN_PT:
         # The card heading (title and subtitle) grows with the text as well.
         row = CARD_ROW_OVERHEAD_CM + 2 * (line_cm(size) - line_cm(BASE_PT))
-        total = TITLE_BLOCK_CM
+        total = TITLE_BLOCK_CM + (MOVES_ROW_CM if moves else 0.0)
         i = 0
         while i < n:
             if is_full_width(i, n):
@@ -137,6 +144,6 @@ def fit_size(cards: list[list[tuple[str, bool]]], news: list[list[str]]) -> floa
     return MIN_PT
 
 
-def card_limit(index: int, active_cards: int, active_news: int) -> int:
-    b = budget(active_cards, active_news)
+def card_limit(index: int, active_cards: int, active_news: int, moves: bool = False) -> int:
+    b = budget(active_cards, active_news, moves)
     return b["card_full"] if is_full_width(index, active_cards) else b["card_half"]
