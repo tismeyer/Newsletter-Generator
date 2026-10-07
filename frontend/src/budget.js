@@ -11,7 +11,7 @@ const LINE_CM = 0.37;
 // Card and short-news text is set between MIN_PT and MAX_PT (see fitSize);
 // line height and characters per line scale from the 8 pt measurements.
 const BASE_PT = 8;
-export const MIN_PT = 9;
+export const MIN_PT = 8;
 export const MAX_PT = 12;
 const STEP_PT = 0.5;
 const PARA_GAP_CM = 0.074;
@@ -31,7 +31,7 @@ const MOVES_ROW_CM = 1.3;
 
 // A card picture spans the card's inner width, proportions kept, never taller
 // than IMAGE_MAX_CM. Pictures are passed as height-to-width ratios, 0 for none.
-export const IMAGE_MAX_CM = 4.5;
+export const IMAGE_MAX_CM = 2.4;
 const IMAGE_GAP_CM = 0.15;
 const HALF_INNER_CM = 7.99;
 const FULL_INNER_CM = 17.04;

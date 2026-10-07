@@ -16,7 +16,7 @@ from __future__ import annotations
 # Card and short-news text is now set between MIN_PT and MAX_PT (see fit_size);
 # line height and characters per line scale from these 8 pt measurements.
 BASE_PT = 8.0
-MIN_PT = 9.0
+MIN_PT = 8.0
 MAX_PT = 12.0
 STEP_PT = 0.5
 PARA_GAP_CM = 0.074          # CardBody space-after (2.1 pt), not scaled
@@ -40,7 +40,7 @@ MOVES_ROW_CM = 1.3
 # A picture in a card spans the card's inner width and keeps its proportions,
 # but is never taller than IMAGE_MAX_CM (a tall one is narrowed and centred).
 # Pictures are passed around as their height-to-width ratio, 0 for none.
-IMAGE_MAX_CM = 4.5
+IMAGE_MAX_CM = 2.4
 IMAGE_GAP_CM = 0.15           # between the picture and the text below
 HALF_INNER_CM = 7.99          # a half-width card less its padding
 FULL_INNER_CM = 17.04         # a full-width card less its padding

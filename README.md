@@ -53,7 +53,7 @@ The one-page layout arranges itself around what is actually filled in:
 * Empty cards and empty short-news rows are dropped before layout, and the
   space returns to the boxes that remain.
 * All card and short-news text is set at one size, chosen from the content:
-  the largest size from 12 pt down to 9 pt (half-point steps) at which
+  the largest size from 12 pt down to 8 pt (half-point steps) at which
   everything fits, with headings one point above the body. `fit_size` in
   `app/budget.py` decides it for the Word file and `fitSize` in
   `frontend/src/budget.js` mirrors it for the preview and the size shown in
@@ -77,7 +77,7 @@ so nothing is stored on the server (`app/images.py` checks and decodes it).
 
 * In a chapter the picture sits under the heading at full width, proportions
   kept, at most 8 cm tall.
-* In a card it spans the card's inner width, proportions kept, at most 4.5 cm
+* In a card it spans the card's inner width, proportions kept, at most 2.4 cm
   tall (`IMAGE_MAX_CM`). Its height counts against the card's allowance and in
   `fit_size`, so a picture makes the text size shrink sooner.
 
