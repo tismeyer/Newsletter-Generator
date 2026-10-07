@@ -43,7 +43,7 @@ export default function App() {
 
   const hasContent =
     state.layout === "one_pager"
-      ? payload.cards.length || payload.news.length
+      ? payload.cards.length || payload.news.length || payload.editorial
       : payload.chapters.length;
 
   // Writes text for every box that has none yet. Boxes that already have
@@ -162,7 +162,15 @@ export default function App() {
           )}
           <fieldset>
             <legend>Payload sent to the backend</legend>
-            <pre className="json">{JSON.stringify(payload, null, 2)}</pre>
+            <pre className="json">
+              {/* pictures are long data URLs; show their size instead */}
+              {JSON.stringify(
+                payload,
+                (k, v) =>
+                  k === "image" && v ? `<picture, ${Math.round((v.length * 3) / 4 / 1024)} KB>` : v,
+                2
+              )}
+            </pre>
           </fieldset>
         </div>
 

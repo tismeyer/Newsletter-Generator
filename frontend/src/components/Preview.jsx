@@ -4,13 +4,14 @@ import icon from "../assets/icon.png";
 import {
   cardFilled,
   departmentFrom,
+  editorialParas,
   fmtDate,
   hasDraft,
   newsFilled,
   onePagerSize,
   textToBlocks,
 } from "../model.js";
-import { isFullWidth } from "../budget.js";
+import { IMAGE_MAX_CM, isFullWidth } from "../budget.js";
 import { ICON_SRC } from "../icons.js";
 
 const SHEET_W = 794; // A4 at 96 dpi
@@ -24,6 +25,27 @@ const PAGE_H = 1123;
 const MARGIN_TOP = 100; // 26.5 mm
 const MARGIN_BOTTOM = 87; // 22.9 mm
 const BODY_H = PAGE_H - MARGIN_TOP - MARGIN_BOTTOM;
+const CM = 96 / 2.54;
+
+/**
+ * A picture at the size Word gives it: `width` cm wide, proportions kept, and
+ * narrowed and centred when that would be taller than `maxH` cm. Sized in
+ * pixels up front so page measuring does not wait for the image to load.
+ */
+function Picture({ image, width, maxH, className }) {
+  const ratio = image.h / image.w;
+  let w = width * CM;
+  let h = w * ratio;
+  if (h > maxH * CM) {
+    h = maxH * CM;
+    w = h / ratio;
+  }
+  return (
+    <div className={className}>
+      <img src={image.src} alt="" style={{ width: w, height: h }} />
+    </div>
+  );
+}
 
 /** One chapter as a list of page blocks: heading, paragraphs, single bullets, boxes. */
 function chapterBlocks(chapter) {
@@ -60,6 +82,8 @@ function chapterBlocks(chapter) {
     </div>,
     true
   );
+  if (chapter.image)
+    add("img", <Picture image={chapter.image} width={17} maxH={8} className="p-chimg" />);
 
   const blocks = hasDraft(chapter) ? textToBlocks(chapter.draft) : null;
   if (blocks) {
@@ -175,6 +199,14 @@ function OnePagerPreview({ state }) {
                 {c.subtitle && <div className="p-cardsub">{c.subtitle}</div>}
               </div>
             </div>
+            {c.image && (
+              <Picture
+                image={c.image}
+                width={full ? 17.04 : 7.99}
+                maxH={IMAGE_MAX_CM}
+                className="p-cardimg"
+              />
+            )}
             {cardInner(c)}
           </div>
         ))}
@@ -184,8 +216,20 @@ function OnePagerPreview({ state }) {
 
   // One size for all card and short-news text, as in the Word file (pt to px at 96 dpi).
   const size = onePagerSize(state);
+  const ed = editorialParas(state);
   return (
     <div className="p-onepager" style={{ "--fs": (size * 96) / 72 + "px" }}>
+      {ed && (
+        <div className="p-editorial">
+          <div className="p-cardhead">
+            <img className="p-icon" src={ICON_SRC[state.editorial.icon]} alt="" />
+            <div className="p-cardtitle">{state.editorial.title || "Editorial"}</div>
+          </div>
+          {ed.map((t, i) => (
+            <p className="p-cardbody" key={i}>{t}</p>
+          ))}
+        </div>
+      )}
       {rows}
       {news.length > 0 && (
         <div className="p-news">
@@ -239,7 +283,7 @@ export default function Preview({ state }) {
   const m = state.masthead;
   const dept = m.footer_issued_by || departmentFrom(m.header_kicker);
   const onePager = state.layout === "one_pager";
-  const visible = state.chapters.filter((c) => c.heading.trim() || c.text.trim() || c.boxes.length);
+  const visible = state.chapters.filter((c) => c.heading.trim() || c.text.trim() || c.boxes.length || c.image);
 
   const title = (
     <div className="p-titleblock">

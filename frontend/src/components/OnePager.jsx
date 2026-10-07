@@ -1,16 +1,19 @@
 import { FlagNotes, GrowText, flagCls, unflag } from "./Bits.jsx";
 import ReviseBar from "./DraftTools.jsx";
 import IconButton from "./IconButton.jsx";
+import PicturePicker from "./PicturePicker.jsx";
 import { ICON_SRC } from "../icons.js";
 import {
   TREATMENTS,
   TREATMENT_COPY,
   cardFilled,
+  editorialParas,
   hasDraft,
+  imageRatio,
   newsFilled,
   onePagerSize,
 } from "../model.js";
-import { MAX_PT, MIN_PT, budget, cardLimit, isFullWidth } from "../budget.js";
+import { MAX_PT, MIN_PT, budget, cardLimit, editorialCm, isFullWidth, lineCm } from "../budget.js";
 
 /** Live character counter. Turns amber near the limit and red past it. */
 function Counter({ used, limit }) {
@@ -44,7 +47,9 @@ const setter = (x, onChange) => (k, v) =>
 function Card({ card, index, activeCards, activeNews, ctx, onChange, onClear }) {
   const set = setter(card, onChange);
   const flags = card.flags;
-  const limit = cardLimit(index, Math.max(activeCards, 1), activeNews, ctx.moves);
+  const limit = cardLimit(
+    index, Math.max(activeCards, 1), activeNews, ctx.moves, ctx.editorial, imageRatio(card.image)
+  );
   const filled = cardFilled(card);
   const full = filled && isFullWidth(index, activeCards);
   const copy = TREATMENT_COPY[card.treatment];
@@ -77,6 +82,12 @@ function Card({ card, index, activeCards, activeNews, ctx, onChange, onClear }) 
             />
           </div>
         </div>
+        <PicturePicker
+          value={card.image}
+          onChange={(v) => set("image", v)}
+          notify={ctx.notify}
+          label={name + " picture"}
+        />
         {drafted ? (
           <GrowText
             className={"ed-cardbody" + flagCls(flags, "text")}
@@ -219,13 +230,56 @@ export default function OnePager({ state, patch, notify }) {
   const setMoves = (m) => patch({ moves: { ...moves, ...m } });
   const activeCards = state.cards.filter(cardFilled).length;
   const activeNews = state.news.filter(newsFilled).length;
-  const b = budget(Math.max(activeCards, 1), activeNews, moves.on);
+  const editorial = state.editorial || { on: false, icon: "pencil", title: "Editorial", text: "" };
+  const setEditorial = (e) => patch({ editorial: { ...editorial, ...e } });
+  const edParas = editorialParas(state);
+  const b = budget(Math.max(activeCards, 1), activeNews, moves.on, edParas);
+  // Lines of card text the editorial costs, at the smallest text size.
+  const edLines = edParas ? Math.round(editorialCm(edParas, MIN_PT) / lineCm(MIN_PT)) : 0;
 
   const setCard = (i, c) => patch({ cards: state.cards.map((x, j) => (j === i ? c : x)) });
   const setNews = (i, n) => patch({ news: state.news.map((x, j) => (j === i ? n : x)) });
 
   return (
     <>
+      <fieldset>
+        <legend>Editorial</legend>
+        <label className="check">
+          <input
+            type="checkbox"
+            checked={editorial.on}
+            onChange={(e) => setEditorial({ on: e.target.checked })}
+          />
+          <span>Add an editorial above the cards</span>
+        </label>
+        {editorial.on && (
+          <div className="ed-paper ed-editorial">
+            <div className="ed-cardhead">
+              <IconButton value={editorial.icon} onChange={(v) => setEditorial({ icon: v })} size={30} />
+              <input
+                type="text"
+                className="inline-field ed-cardtitle"
+                placeholder="Editorial"
+                aria-label="Editorial title"
+                value={editorial.title}
+                onChange={(e) => setEditorial({ title: e.target.value })}
+              />
+            </div>
+            <GrowText
+              className="ed-cardbody"
+              value={editorial.text}
+              onChange={(v) => setEditorial({ text: v })}
+              placeholder="A few words to open this issue. Printed exactly as typed."
+              ariaLabel="Editorial text"
+            />
+          </div>
+        )}
+        <p className="hint">
+          Spans the full width above the cards and is printed exactly as typed.
+          {edLines > 0 && <> It takes about {edLines} lines of space from the cards.</>}
+        </p>
+      </fieldset>
+
       <fieldset>
         <legend>
           Cards <span className="soft">{activeCards} of 4 in use</span>
@@ -249,10 +303,10 @@ export default function OnePager({ state, patch, notify }) {
             index={i}
             activeCards={activeCards}
             activeNews={activeNews}
-            ctx={{ ...ctx, moves: moves.on }}
+            ctx={{ ...ctx, moves: moves.on, editorial: edParas }}
             onChange={(nc) => setCard(i, nc)}
             onClear={() =>
-              setCard(i, { ...c, title: "", subtitle: "", text: "", draft: null, draftFrom: "", flags: {} })
+              setCard(i, { ...c, title: "", subtitle: "", text: "", draft: null, draftFrom: "", flags: {}, image: null })
             }
           />
         ))}

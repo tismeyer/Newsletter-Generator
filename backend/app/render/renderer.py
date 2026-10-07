@@ -12,8 +12,9 @@ from pathlib import Path
 
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
-from docx.shared import Pt, RGBColor, Twips
+from docx.shared import Cm, Pt, RGBColor, Twips
 
+from .. import images
 from ..schemas import Masthead, RenderedChapter
 from . import docxutil as X
 
@@ -29,6 +30,7 @@ CONTENT_W = Twips(9638)  # A4 minus 2 cm margins, matching the template
 ASSETS = TEMPLATE.parent
 ICON_PT = 20             # round chapter icon beside the heading
 HEADING_RAISE_PT = 6     # lifts the 10 pt heading text to the icon's middle
+IMAGE_MAX_H = Cm(8)      # a chapter picture is full width unless that is taller
 
 
 def _fmt_date(d) -> str:
@@ -59,6 +61,22 @@ def _box(doc, kind: str, title: str, text: str) -> None:
         cp.paragraph_format.space_after = Pt(3)
 
     doc.add_paragraph()  # breathing room after the box
+
+
+def _picture(doc, data_url: str) -> None:
+    """A chapter's picture: full content width, uncropped, at most IMAGE_MAX_H tall."""
+    stream, ratio = images.as_stream(data_url)
+    width = CONTENT_W
+    height = int(width * ratio)
+    if height > IMAGE_MAX_H:
+        height = IMAGE_MAX_H
+        width = int(height / ratio)
+    p = doc.add_paragraph()
+    X.set_style(p, "Body")
+    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    # Body text has an exact line height, which would clip the picture.
+    p.paragraph_format.line_spacing = 1.0
+    p.add_run().add_picture(stream, width=width, height=height)
 
 
 def render_document(masthead: Masthead, chapters: list[RenderedChapter]) -> bytes:
@@ -100,6 +118,8 @@ def render_document(masthead: Masthead, chapters: list[RenderedChapter]) -> byte
             X.raise_run(text, HEADING_RAISE_PT)
         else:
             heading.add_run(chapter.heading)
+        if chapter.image:
+            _picture(doc, chapter.image)
         for block in chapter.blocks:
             if block.kind == "body":
                 for para in [t for t in block.text.split("\n") if t.strip()]:

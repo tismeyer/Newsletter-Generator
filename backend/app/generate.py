@@ -15,6 +15,7 @@ from .prompts import (
     effective_box_policy,
     revise_prompt,
 )
+from . import images
 from .providers import GenerationError, Provider
 from .schemas import (
     Card,
@@ -123,10 +124,11 @@ async def build_draft(req: DocumentRequest, provider: Provider) -> list[Rendered
         )
         blocks.extend(boxes)
         return RenderedChapter(
-            heading=chapter.heading, icon=chapter.icon, blocks=blocks, provider_used=used
+            heading=chapter.heading, icon=chapter.icon, blocks=blocks, provider_used=used,
+            image=chapter.image,
         )
 
-    usable = [c for c in req.chapters if c.heading.strip() or c.text.strip() or c.boxes]
+    usable = [c for c in req.chapters if c.heading.strip() or c.text.strip() or c.boxes or c.image]
     if not usable:
         raise GenerationError("Add at least one chapter with a heading or some text.")
     # Chapters are independent, so they are drafted concurrently.
@@ -157,20 +159,23 @@ async def build_one_pager(req: DocumentRequest, provider: Provider):
 
     cards = [c for c in req.cards if c.filled]
     news = [n for n in req.news if n.filled]
-    if not cards and not news:
+    if not cards and not news and not (req.editorial and req.editorial.filled):
         raise GenerationError("Fill at least one card or one short-news row.")
 
     moves = bool(req.moves)
-    limits = compute_budget(len(cards), len(news), moves)
+    editorial = req.editorial.paragraphs if req.editorial else None
+    limits = compute_budget(len(cards), len(news), moves, editorial)
 
     async def one_card(index: int, card: Card) -> RenderedCard:
-        limit = card_limit(index, len(cards), len(news), moves)
+        limit = card_limit(
+            index, len(cards), len(news), moves, editorial, images.ratio(card.image)
+        )
         text, used = await _box_text(
             provider, card.treatment, card.text, card.title, req.style, limit
         )
         return RenderedCard(
             icon=card.icon, title=card.title, subtitle=card.subtitle,
-            blocks=text_to_blocks(text), provider_used=used,
+            blocks=text_to_blocks(text), provider_used=used, image=card.image,
         )
 
     async def one_news(item: NewsItem) -> RenderedNews:

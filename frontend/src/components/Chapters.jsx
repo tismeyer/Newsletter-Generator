@@ -1,6 +1,7 @@
 import { FlagNotes, GrowText, flagCls, unflag } from "./Bits.jsx";
 import ReviseBar from "./DraftTools.jsx";
 import IconButton from "./IconButton.jsx";
+import PicturePicker from "./PicturePicker.jsx";
 import {
   MAX_CHAPTERS,
   TREATMENTS,
@@ -124,6 +125,13 @@ function Chapter({ chapter, index, ctx, onChange, onRemove }) {
           onChange={(e) => set("heading", e.target.value)}
         />
       </div>
+      <PicturePicker
+        value={chapter.image}
+        onChange={(v) => set("image", v)}
+        notify={ctx.notify}
+        label={name + " picture"}
+        className="wide"
+      />
 
       {drafted ? (
         <DraftEditor

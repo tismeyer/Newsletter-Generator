@@ -65,6 +65,21 @@ The one-page layout arranges itself around what is actually filled in:
   returns the current allowances; `frontend/src/budget.js` mirrors the
   calculation so the counter updates without a round trip. **If you change one,
   change the other.**
+* An optional **editorial** can open the page: full width above the cards,
+  printed exactly as typed (no AI). Its height comes off the cards'
+  allowance (`editorial=` on `/api/budget` takes its length in characters).
+
+### Pictures
+
+Chapters and cards can each carry one picture. The browser scales it to at
+most 1600 px and sends it as a JPEG data URL inside the draft and the request,
+so nothing is stored on the server (`app/images.py` checks and decodes it).
+
+* In a chapter the picture sits under the heading at full width, proportions
+  kept, at most 8 cm tall.
+* In a card it spans the card's inner width, proportions kept, at most 4.5 cm
+  tall (`IMAGE_MAX_CM`). Its height counts against the card's allowance and in
+  `fit_size`, so a picture makes the text size shrink sooner.
 
 ## How text is produced
 

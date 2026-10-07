@@ -16,11 +16,13 @@ from pathlib import Path
 
 from docx import Document
 from docx.enum.table import WD_ALIGN_VERTICAL
+from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml.ns import qn
-from docx.shared import Pt, RGBColor, Twips
+from docx.shared import Cm, Pt, RGBColor, Twips
 
-from ..budget import card_rows, fit_size, is_full_width
-from ..schemas import Masthead, Movements, RenderedCard, RenderedNews
+from .. import images
+from ..budget import IMAGE_GAP_CM, IMAGE_MAX_CM, card_rows, fit_size, is_full_width
+from ..schemas import Editorial, Masthead, Movements, RenderedCard, RenderedNews
 from . import docxutil as X
 
 ASSETS = Path(__file__).resolve().parent.parent / "assets"
@@ -111,6 +113,22 @@ def _fill_card(cell, card: RenderedCard, width: int, size: float) -> None:
     gap.paragraph_format.space_after = Pt(0)
     gap.paragraph_format.line_spacing = Pt(5)
 
+    if card.image:
+        # The card's full inner width, proportions kept; a tall picture is
+        # capped at IMAGE_MAX_CM and centred (budget.image_cm counts the same).
+        stream, ratio = images.as_stream(card.image)
+        w = Twips(width - 2 * CARD_PAD)
+        h = int(w * ratio)
+        if h > Cm(IMAGE_MAX_CM):
+            h = Cm(IMAGE_MAX_CM)
+            w = int(h / ratio)
+        pic = cell.add_paragraph()
+        pic.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        pic.paragraph_format.space_before = Pt(0)
+        pic.paragraph_format.space_after = Cm(IMAGE_GAP_CM)
+        pic.paragraph_format.line_spacing = 1.0
+        pic.add_run().add_picture(stream, width=w, height=h)
+
     bullet_numpr = getattr(cell, "_bullet_numpr", None)
     for block in card.blocks:
         if block.kind == "bullets":
@@ -137,6 +155,36 @@ def _fill_card(cell, card: RenderedCard, width: int, size: float) -> None:
             X.set_style(p, "CardBody")
             X.set_size(p, size)
     _ensure_trailing_paragraph(cell)
+
+
+def _editorial(doc, ed: Editorial, size: float) -> None:
+    """The introduction above the cards: full width, no grey box, a hairline
+    beneath it. Printed exactly as typed."""
+    table = doc.add_table(rows=1, cols=1)
+    X.table_no_borders(table)
+    table.autofit = False
+    X.fixed_columns(table, [CONTENT_W])
+    row = table.rows[0]
+    X.row_cannot_split(row)
+    cell = row.cells[0]
+    X.cell_borders(cell, bottom=CARD_LINE, size=4)
+    X.cell_margins(cell, top=0, bottom=120, left=0, right=0)
+
+    head = _icon_header(cell, ed.icon, CARD_ICON_PT, CONTENT_W)
+    title = head.paragraphs[0]
+    X.set_style(title, "CardTitle")
+    title.add_run((ed.title.strip() or "Editorial").upper())
+    X.set_size(title, size + 1)
+    title.paragraph_format.space_after = Pt(0)
+    gap = cell.add_paragraph()
+    gap.paragraph_format.space_after = Pt(0)
+    gap.paragraph_format.line_spacing = Pt(5)
+    for line in ed.paragraphs:
+        p = cell.add_paragraph(line)
+        X.set_style(p, "CardBody")
+        X.set_size(p, size)
+    _ensure_trailing_paragraph(cell)
+    doc.add_paragraph()  # gap below, as below a row of cards
 
 
 def _card_tables(doc, cards: list[RenderedCard], bullet_numpr, size: float):
@@ -259,6 +307,7 @@ def render_one_pager(
     cards: list[RenderedCard],
     news: list[RenderedNews],
     moves: Movements | None = None,
+    editorial: Editorial | None = None,
 ) -> bytes:
     doc = Document(str(TEMPLATE))
     bullet_numpr = X.find_bullet_numpr(doc)
@@ -284,14 +333,18 @@ def render_one_pager(
         doc.add_paragraph(masthead.publication_date.strftime("%d.%m.%Y")), "DocDate"
     )
 
-    usable_cards = [c for c in cards if c.title.strip() or c.blocks]
+    usable_cards = [c for c in cards if c.title.strip() or c.blocks or c.image]
     usable_news = [n for n in news if n.label.strip() or any(l.strip() for l in n.lines)]
 
     size = fit_size(
         [_paragraphs(c) for c in usable_cards],
         [[l for l in n.lines if l.strip()] for n in usable_news],
         moves=moves is not None,
+        editorial=editorial.paragraphs if editorial and editorial.filled else None,
+        images=[images.ratio(c.image) for c in usable_cards],
     )
+    if editorial and editorial.filled:
+        _editorial(doc, editorial, size)
     _card_tables(doc, usable_cards, bullet_numpr, size)
     _news_table(doc, usable_news, size)
     if moves is not None:

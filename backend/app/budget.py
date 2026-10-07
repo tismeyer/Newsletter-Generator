@@ -37,6 +37,18 @@ NEWS_LINES = 3               # lines allowed per short-news item
 # with its padding and rules. Reserved whole whenever the row is switched on.
 MOVES_ROW_CM = 1.3
 
+# A picture in a card spans the card's inner width and keeps its proportions,
+# but is never taller than IMAGE_MAX_CM (a tall one is narrowed and centred).
+# Pictures are passed around as their height-to-width ratio, 0 for none.
+IMAGE_MAX_CM = 4.5
+IMAGE_GAP_CM = 0.15           # between the picture and the text below
+HALF_INNER_CM = 7.99          # a half-width card less its padding
+FULL_INNER_CM = 17.04         # a full-width card less its padding
+
+# The optional editorial above the cards: a heading row like a card's, then
+# full-width text. Measured like a card row, without the grey box.
+EDITORIAL_OVERHEAD_CM = CARD_ROW_OVERHEAD_CM
+
 MAX_CARDS = 4
 MAX_NEWS = 3
 
@@ -59,7 +71,20 @@ def chars_per_line(base_chars: int, size_pt: float) -> float:
     return base_chars * BASE_PT / size_pt
 
 
-def budget(active_cards: int, active_news: int, moves: bool = False) -> dict:
+def editorial_cm(paragraphs: list[str] | None, size: float) -> float:
+    """Height of the editorial block, heading included; 0 when there is none."""
+    if not paragraphs:
+        return 0.0
+    head = EDITORIAL_OVERHEAD_CM + 2 * (line_cm(size) - line_cm(BASE_PT))
+    return head + _card_cm([(p, False) for p in paragraphs], True, size)
+
+
+def budget(
+    active_cards: int,
+    active_news: int,
+    moves: bool = False,
+    editorial: list[str] | None = None,
+) -> dict:
     """Return the per-box character allowances for this combination.
 
     Fewer boxes means more room for the ones that remain, which is why the
@@ -74,6 +99,7 @@ def budget(active_cards: int, active_news: int, moves: bool = False) -> dict:
         + rows * CARD_ROW_OVERHEAD_CM
         + active_news * NEWS_ROW_OVERHEAD_CM
         + (MOVES_ROW_CM if moves else 0.0)
+        + editorial_cm(editorial, MIN_PT)
     )
     # Allowances assume the smallest size, so text within them always fits.
     usable_cm = max(0.0, PAGE_BODY_CM - overhead)
@@ -91,15 +117,25 @@ def budget(active_cards: int, active_news: int, moves: bool = False) -> dict:
     }
 
 
+def image_cm(ratio: float, full: bool) -> float:
+    """Height a card's picture takes, gap included; 0 without a picture."""
+    if not ratio:
+        return 0.0
+    return min((FULL_INNER_CM if full else HALF_INNER_CM) * ratio, IMAGE_MAX_CM) + IMAGE_GAP_CM
+
+
 def _lines(text: str, per_line: float) -> int:
     return max(1, -(-len(text) // max(1, int(per_line))))
 
 
-def _card_cm(paragraphs: list[tuple[str, bool]], full: bool, size: float) -> float:
-    """Height of one card's body text. `paragraphs` is (text, is_bullet)."""
+def _card_cm(
+    paragraphs: list[tuple[str, bool]], full: bool, size: float, image: float = 0.0
+) -> float:
+    """Height of one card's body text, and its picture if it has one.
+    `paragraphs` is (text, is_bullet)."""
     base = CHARS_PER_LINE_FULL if full else CHARS_PER_LINE_HALF
     per_line = chars_per_line(base, size)
-    h = 0.0
+    h = image_cm(image, full)
     for text, bullet in paragraphs:
         h += _lines(text, per_line * (BULLET_SHARE if bullet else 1)) * line_cm(size)
         h += PARA_GAP_CM
@@ -113,7 +149,11 @@ def _news_cm(lines: list[str], size: float) -> float:
 
 
 def fit_size(
-    cards: list[list[tuple[str, bool]]], news: list[list[str]], moves: bool = False
+    cards: list[list[tuple[str, bool]]],
+    news: list[list[str]],
+    moves: bool = False,
+    editorial: list[str] | None = None,
+    images: list[float] | None = None,
 ) -> float:
     """The largest text size, MIN_PT..MAX_PT, at which everything fits the page.
 
@@ -123,19 +163,22 @@ def fit_size(
     counters warn about that). Mirrored in frontend/src/budget.js.
     """
     n = len(cards)
+    pics = list(images or []) + [0.0] * n
     size = MAX_PT
     while size >= MIN_PT:
         # The card heading (title and subtitle) grows with the text as well.
         row = CARD_ROW_OVERHEAD_CM + 2 * (line_cm(size) - line_cm(BASE_PT))
         total = TITLE_BLOCK_CM + (MOVES_ROW_CM if moves else 0.0)
+        total += editorial_cm(editorial, size)
         i = 0
         while i < n:
             if is_full_width(i, n):
-                total += row + _card_cm(cards[i], True, size)
+                total += row + _card_cm(cards[i], True, size, pics[i])
                 i += 1
             else:
-                pair = cards[i:i + 2]
-                total += row + max(_card_cm(c, False, size) for c in pair)
+                total += row + max(
+                    _card_cm(cards[k], False, size, pics[k]) for k in range(i, min(i + 2, n))
+                )
                 i += 2
         total += sum(_news_cm(l, size) for l in news)
         if total <= PAGE_BODY_CM:
@@ -144,6 +187,21 @@ def fit_size(
     return MIN_PT
 
 
-def card_limit(index: int, active_cards: int, active_news: int, moves: bool = False) -> int:
-    b = budget(active_cards, active_news, moves)
-    return b["card_full"] if is_full_width(index, active_cards) else b["card_half"]
+def card_limit(
+    index: int,
+    active_cards: int,
+    active_news: int,
+    moves: bool = False,
+    editorial: list[str] | None = None,
+    image: float = 0.0,
+) -> int:
+    """A card's character allowance; `image` is its picture's height-to-width
+    ratio, 0 without one."""
+    b = budget(active_cards, active_news, moves, editorial)
+    full = is_full_width(index, active_cards)
+    limit = b["card_full"] if full else b["card_half"]
+    if image:
+        lines = -(-image_cm(image, full) // line_cm(MIN_PT))
+        per_line = chars_per_line(CHARS_PER_LINE_FULL if full else CHARS_PER_LINE_HALF, MIN_PT)
+        limit -= int(lines * per_line)
+    return max(0, limit)

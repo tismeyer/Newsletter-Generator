@@ -11,6 +11,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
+from . import images
 from .config import settings
 
 
@@ -53,11 +54,17 @@ class Chapter(BaseModel):
     text: str = ""
     box_policy: BoxPolicy = BoxPolicy.INHERIT
     boxes: list[Box] = Field(default_factory=list)
+    image: str = ""         # data URL of a picture under the heading, or empty
 
     @field_validator("icon")
     @classmethod
     def _known_icon(cls, v: str) -> str:
         return v if v in ICONS else ""
+
+    @field_validator("image")
+    @classmethod
+    def _usable_image(cls, v: str) -> str:
+        return images.check(v)
 
     @field_validator("boxes")
     @classmethod
@@ -82,15 +89,21 @@ class Card(BaseModel):
     subtitle: str = ""
     text: str = ""
     treatment: Treatment = Treatment.DRAFT
+    image: str = ""         # data URL of a picture under the card heading, or empty
 
     @field_validator("icon")
     @classmethod
     def _known_icon(cls, v: str) -> str:
         return v if v in ICONS else "info"
 
+    @field_validator("image")
+    @classmethod
+    def _usable_image(cls, v: str) -> str:
+        return images.check(v)
+
     @property
     def filled(self) -> bool:
-        return bool(self.title.strip() or self.text.strip())
+        return bool(self.title.strip() or self.text.strip() or self.image)
 
 
 class NewsItem(BaseModel):
@@ -121,6 +134,28 @@ class Movements(BaseModel):
     @property
     def filled(self) -> bool:
         return bool(self.entries.strip() or self.exits.strip())
+
+
+class Editorial(BaseModel):
+    """The optional full-width introduction at the top of the one-page layout,
+    above the cards. Printed exactly as typed; no AI touches it."""
+
+    icon: str = "pencil"
+    title: str = "Editorial"
+    text: str = ""
+
+    @field_validator("icon")
+    @classmethod
+    def _known_icon(cls, v: str) -> str:
+        return v if v in ICONS else "pencil"
+
+    @property
+    def filled(self) -> bool:
+        return bool(self.text.strip())
+
+    @property
+    def paragraphs(self) -> list[str]:
+        return [t.strip() for t in self.text.split("\n") if t.strip()]
 
 
 class Masthead(BaseModel):
@@ -162,6 +197,7 @@ class DocumentRequest(BaseModel):
     cards: list[Card] = Field(default_factory=list)
     news: list[NewsItem] = Field(default_factory=list)
     moves: Movements | None = None   # None: the entries/exits row is off
+    editorial: Editorial | None = None  # None: no introduction above the cards
     provider: Literal["claude", "azure", "copilot", "manual"] | None = None
 
     @field_validator("cards")
@@ -200,6 +236,12 @@ class RenderedChapter(BaseModel):
     icon: str = ""
     blocks: list[RenderedBlock]
     provider_used: str
+    image: str = ""
+
+    @field_validator("image")
+    @classmethod
+    def _usable_image(cls, v: str) -> str:
+        return images.check(v)
 
 
 class RenderedCard(BaseModel):
@@ -208,6 +250,12 @@ class RenderedCard(BaseModel):
     subtitle: str = ""
     blocks: list[RenderedBlock]
     provider_used: str
+    image: str = ""
+
+    @field_validator("image")
+    @classmethod
+    def _usable_image(cls, v: str) -> str:
+        return images.check(v)
 
 
 class RenderedNews(BaseModel):
@@ -229,6 +277,7 @@ class DraftResponse(BaseModel):
     chapters: list[RenderedChapter] = Field(default_factory=list)
     cards: list[RenderedCard] = Field(default_factory=list)
     news: list[RenderedNews] = Field(default_factory=list)
+    editorial: Editorial | None = None
 
 
 class RenderRequest(BaseModel):
@@ -238,6 +287,7 @@ class RenderRequest(BaseModel):
     cards: list[RenderedCard] = Field(default_factory=list)
     news: list[RenderedNews] = Field(default_factory=list)
     moves: Movements | None = None
+    editorial: Editorial | None = None
 
 
 class ReviseRequest(BaseModel):

@@ -50,11 +50,12 @@ async def providers() -> dict:
 
 
 @app.get("/api/budget")
-async def budget(cards: int = 4, news: int = 3) -> dict:
+async def budget(cards: int = 4, news: int = 3, moves: bool = False, editorial: int = 0) -> dict:
     """Character allowances for the one-page layout, given how many boxes are in
     use. The frontend mirrors this calculation for the live counters; this
-    endpoint is the authority if the two ever disagree."""
-    return compute_budget(cards, news)
+    endpoint is the authority if the two ever disagree. `editorial` is the
+    length of the editorial text in characters, 0 when there is none."""
+    return compute_budget(cards, news, moves, ["x" * editorial] if editorial > 0 else None)
 
 
 @app.post("/api/draft", response_model=DraftResponse)
@@ -68,7 +69,8 @@ async def draft(req: DocumentRequest) -> DraftResponse:
         if req.layout is Layout.ONE_PAGER:
             cards, news = await build_one_pager(req, provider)
             return DraftResponse(
-                masthead=req.masthead, layout=req.layout, cards=cards, news=news
+                masthead=req.masthead, layout=req.layout, cards=cards, news=news,
+                editorial=req.editorial,
             )
         chapters = await build_draft(req, provider)
     except GenerationError as e:
@@ -127,7 +129,9 @@ async def render(req: RenderRequest) -> Response:
     """Build the .docx from reviewed text."""
     try:
         if req.layout is Layout.ONE_PAGER:
-            data = render_one_pager(req.masthead, req.cards, req.news, req.moves)
+            data = render_one_pager(
+                req.masthead, req.cards, req.news, req.moves, req.editorial
+            )
         else:
             data = render_document(req.masthead, req.chapters)
     except Exception as e:  # noqa: BLE001 - surfaced to the editor as a message
@@ -148,5 +152,5 @@ async def document(req: DocumentRequest) -> Response:
     return await render(RenderRequest(
         masthead=drafted.masthead, layout=drafted.layout,
         chapters=drafted.chapters, cards=drafted.cards, news=drafted.news,
-        moves=req.moves,
+        moves=req.moves, editorial=drafted.editorial,
     ))

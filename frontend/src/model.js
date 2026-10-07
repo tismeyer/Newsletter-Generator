@@ -49,7 +49,7 @@ export const ICONS = [
 export const newCard = (icon = "info") => ({
   id: crypto.randomUUID ? crypto.randomUUID() : String(Math.random()),
   icon, title: "", subtitle: "", text: "", treatment: "draft",
-  draft: null, draftFrom: "",
+  draft: null, draftFrom: "", image: null,
 });
 
 export const newNews = (icon = "smile") => ({
@@ -59,7 +59,18 @@ export const newNews = (icon = "smile") => ({
 });
 
 /** A box counts towards the layout only once it has a title or some text. */
-export const cardFilled = (c) => Boolean(c.title.trim() || c.text.trim());
+export const cardFilled = (c) => Boolean(c.title.trim() || c.text.trim() || c.image);
+
+/** A picture as kept in the state: { src: data URL, w, h } in pixels, or null. */
+export const imageRatio = (img) => (img && img.w ? img.h / img.w : 0);
+
+/** The editorial above the cards, as paragraphs, or null when it is off or empty. */
+export const editorialParas = (s) => {
+  const e = s.editorial;
+  if (!e?.on) return null;
+  const paras = e.text.split("\n").map((t) => t.trim()).filter(Boolean);
+  return paras.length ? paras : null;
+};
 export const newsFilled = (n) => Boolean(n.label.trim() || n.text.trim());
 
 export const TREATMENTS = [
@@ -117,6 +128,7 @@ export const newChapter = (heading = "", icon = "") => ({
   boxes: [],
   draft: null,
   draftFrom: "",
+  image: null,
 });
 
 export const emptyState = () => ({
@@ -143,6 +155,8 @@ export const emptyState = () => ({
   news: [newNews("smile"), newNews("heart"), newNews("check")],
   // The entries/exits row at the foot of the one-page layout; off unless asked for.
   moves: { on: false, entries: "", exits: "" },
+  // The editorial above the cards of the one-page layout; printed as typed.
+  editorial: { on: false, icon: "pencil", title: "Editorial", text: "" },
   provider: "claude",
   // Set by a Word import: what came in, and where the AI was unsure.
   importInfo: null,
@@ -160,7 +174,7 @@ export const emptyState = () => ({
 export const hasDraft = (x) => typeof x.draft === "string";
 export const draftStale = (x) => hasDraft(x) && (x.draftFrom ?? "") !== x.text;
 
-const chapterUsed = (c) => Boolean(c.heading.trim() || c.text.trim() || c.boxes.length);
+const chapterUsed = (c) => Boolean(c.heading.trim() || c.text.trim() || c.boxes.length || c.image);
 
 /** True when "Generate text" has something to write for this box. */
 export const wantsDraft = (x) =>
@@ -318,6 +332,7 @@ export function toPayload(s) {
         ? {
             heading: c.heading, icon: c.icon || "",
             treatment: "verbatim", text: c.draft, box_policy: "none", boxes: [],
+            image: c.image?.src || "",
           }
         : {
             heading: c.heading,
@@ -326,11 +341,12 @@ export function toPayload(s) {
             text: c.text,
             box_policy: c.treatment === "verbatim" ? "none" : c.box_policy,
             boxes: c.boxes.map((b) => ({ type: b.type, title: b.title, text: b.text })),
+            image: c.image?.src || "",
           }
     ),
   };
 
-  if (s.layout !== "one_pager") return { ...base, cards: [], news: [] };
+  if (s.layout !== "one_pager") return { ...base, cards: [], news: [], editorial: null };
 
   // Unused boxes are dropped here, not in the renderer: the remaining boxes
   // then receive their share of the page.
@@ -341,6 +357,7 @@ export function toPayload(s) {
       icon: c.icon, title: c.title, subtitle: c.subtitle,
       text: hasDraft(c) ? c.draft : c.text,
       treatment: hasDraft(c) ? "verbatim" : c.treatment,
+      image: c.image?.src || "",
     })),
     news: s.news.filter(newsFilled).map((n) => ({
       icon: n.icon, label: n.label,
@@ -348,6 +365,9 @@ export function toPayload(s) {
       treatment: hasDraft(n) ? "verbatim" : n.treatment,
     })),
     moves: s.moves?.on ? { entries: s.moves.entries, exits: s.moves.exits } : null,
+    editorial: editorialParas(s)
+      ? { icon: s.editorial.icon, title: s.editorial.title, text: s.editorial.text }
+      : null,
   };
 }
 
@@ -366,10 +386,13 @@ function cardParagraphs(c) {
 export function onePagerSize(s) {
   const lines = (n) =>
     (hasDraft(n) ? n.draft : n.text).split("\n").map((l) => l.trim()).filter(Boolean);
+  const cards = s.cards.filter(cardFilled);
   return fitSize(
-    s.cards.filter(cardFilled).map(cardParagraphs),
+    cards.map(cardParagraphs),
     s.news.filter(newsFilled).map(lines),
-    Boolean(s.moves?.on)
+    Boolean(s.moves?.on),
+    editorialParas(s),
+    cards.map((c) => imageRatio(c.image))
   );
 }
 
